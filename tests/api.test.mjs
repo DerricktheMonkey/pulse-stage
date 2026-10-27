@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {DatabaseSync} from 'node:sqlite';
+const source=await readFile('dist/server/index.js','utf8'),worker=(await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'))).default;
+const sqlite=new DatabaseSync(':memory:');sqlite.exec(await readFile('drizzle/0000_song_library.sql','utf8'));
+const DB={prepare(sql){return {bind(...args){const stmt=sqlite.prepare(sql);return {first:async()=>stmt.get(...args),all:async()=>({results:stmt.all(...args)}),run:async()=>stmt.run(...args)};}};}};
+const objects=new Map();const BUCKET={async put(key,stream,options){objects.set(key,{bytes:await new Response(stream).arrayBuffer(),type:options.httpMetadata.contentType});},async delete(keys){for(const key of Array.isArray(keys)?keys:[keys])objects.delete(key);},async get(key){const item=objects.get(key);return item?{body:item.bytes,size:item.bytes.byteLength,writeHttpMetadata:h=>h.set('Content-Type',item.type)}:null;}};
+async function call(path,options={},user){const headers=new Headers(options.headers);headers.set('Origin','https://stage.test');if(user)headers.set('oai-authenticated-user-id',user);return worker.fetch(new Request('https://stage.test'+path,{...options,headers}),{DB,BUCKET},{});}
+const form=()=>{const f=new FormData();for(const [key,value] of Object.entries({title:'My original melody',creator:'Player One',difficulty:'normal',duration:'5',chart:JSON.stringify({notes:[{time:1,lane:0,duration:.4,kind:'slide',endLane:1}],offsetMs:20}),shared:'0'}))f.set(key,value);f.set('audio',new Blob(['test audio'],{type:'audio/wav'}),'song.wav');return f;};
+assert.equal((await call('/api/songs',{method:'POST',body:form()})).status,401);
+const saved=await call('/api/songs',{method:'POST',body:form()},'owner');assert.equal(saved.status,201);const {id}=await saved.json();assert.equal(objects.size,1);
+assert.equal((await call('/api/songs/'+id)).status,404);assert.equal((await call('/api/songs/'+id+'/audio',{},'other')).status,404);
+assert.equal((await (await call('/api/songs?mine=1',{},'owner')).json()).songs.length,1);
+assert.equal((await (await call('/api/songs')).json()).songs.length,0);
+assert.equal((await call('/api/songs/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:'{"shared":true}'},'owner')).status,200);
+const shared=await (await call('/api/songs/'+id)).json();assert.equal(shared.chart.notes[0].kind,'slide');assert(!('owner_id' in shared));assert.equal(shared.creator,'Player One');
+assert.equal((await call('/api/songs/'+id+'/audio')).status,200);
+assert.equal((await call('/api/songs/'+id,{method:'DELETE'},'other')).status,403);
+assert.equal((await call('/api/songs/'+id,{method:'DELETE'},'owner')).status,200);assert.equal(objects.size,0);
+const bad=form();bad.set('chart',JSON.stringify({notes:[{time:1,lane:7}]}));assert.equal((await call('/api/songs',{method:'POST',body:bad},'owner')).status,400);
+const cross=new Request('https://stage.test/api/songs',{method:'POST',headers:{Origin:'https://evil.test','oai-authenticated-user-id':'owner'},body:form()});assert.equal((await worker.fetch(cross,{DB,BUCKET},{})).status,403);
+const landing=await call('/');assert.equal(landing.status,200);assert((await landing.text()).includes('pauseMenu'));assert.equal((await call('/library.js')).status,200);
+console.log('PASS: database migration, authenticated saves, private media, public sharing, ownership, delete cleanup, slide chart round-trip, CSRF and Worker assets.');

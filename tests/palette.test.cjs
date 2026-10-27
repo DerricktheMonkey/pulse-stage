@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const P=require('../palette.js');
+const P=require('../public/palette.js');
 const pixels=[];for(let i=0;i<100;i++)pixels.push(240,25,30,255);for(let i=0;i<80;i++)pixels.push(20,40,235,255);
 const colors=P.fromPixels(pixels);assert.equal(colors.length,4);assert(colors.every(c=>/^#[0-9a-f]{6}$/.test(c)));
 const rgb=colors.map(c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)));
