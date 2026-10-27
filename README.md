@@ -77,3 +77,5 @@ After **Finish** or Escape, fine-tune timing, lane, and hold length in the timel
 For a retake, set **From / To** song times and press **Retake this section**. Recording starts at From and stops at To, replacing only notes in that interval. Notes outside it remain intact. Holds crossing either boundary must be kept outside the interval by adjusting its bounds. Undo restores the previous take. **Use current position + 10s** sets a quick range; scrub to any position first.
 
 Choose **Easy / Normal / Hard** and a **level rating from 1 to 40**, then **Save Song** or **Upload Song**. Both paths preserve your chart, scene, rating, and glow setting. Difficulty changes preserve recorded notes. Back to songs returns to the separate Play Songs mode.
+
+Song Creation recording and section retakes show a **3–2–1 countdown** before audio and note recording begin. The count-in lasts three real seconds at every playback speed. Escape or Finish during the count-in cancels it and preserves the previous chart. Preview starts immediately.
