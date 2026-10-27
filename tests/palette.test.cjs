@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');
+const P=require('../palette.js');
+const pixels=[];for(let i=0;i<100;i++)pixels.push(240,25,30,255);for(let i=0;i<80;i++)pixels.push(20,40,235,255);
+const colors=P.fromPixels(pixels);assert.equal(colors.length,4);assert(colors.every(c=>/^#[0-9a-f]{6}$/.test(c)));
+const rgb=colors.map(c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)));
+assert(rgb.some(([r,g,b])=>r>g+50&&r>b+50),'Keep the sampled red hue');
+assert(rgb.some(([r,g,b])=>b>r+50&&b>g+50),'Keep the sampled blue hue');
+assert(rgb.every(c=>Math.max(...c)>190),'Keep notes bright enough over a dim scene');
+assert.equal(P.fromPixels([]).length,4);assert.equal(P.fromPixels([0,0,0,255]).length,4);assert.equal(P.fromPixels([255,255,255,0]).length,4);
+const red=P.fromPixels(Array.from({length:30},()=>[255,0,0,255]).flat());assert.equal(new Set(red).size,4,'Single-color scenes get readable shade variants');
+console.log('PASS: scene hue matching, readable brightness, four lane colors and monochrome/empty fallback.');
