@@ -9,11 +9,15 @@ A browser rhythm game with custom songs, automatic audio scanning, scene-matched
 ## How to play
 
 - Press **D, F, J, K** or tap the four lanes. Hold keys for long notes.
-- Play requests browser fullscreen and fills the viewport. Press **Escape** to pause; choose Resume, Restart Song, or Return to Menu.
+- Play requests browser fullscreen and fills the viewport. Press **Escape** to pause; choose Resume, Restart Song, Change Song, or Return to Menu.
 - Normal charts include long hold notes: keep the same lane pressed as the ring shrinks. The bright tail cap reaches the hit line and a **RELEASE** cue shows when to let go.
 - Hard charts include simultaneous notes: matching warm glows show which lanes to press together.
 - **S rank** requires every note to be Perfect. A full combo with any Great or Good earns a lower rank.\n- Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
 - Older slide charts automatically load as same-lane holds. Click **Scan song & rebuild** to regenerate a chart.
+
+## Song selector
+
+Use **Change Song** in the game bar or pause menu to choose a saved level or import a new song. **Saved Songs** at the top left of the studio opens the same selector. The selected song title appears in the preview and game bar.
 
 ## Save and upload songs
 
