@@ -68,8 +68,12 @@ npm test
 
 Imports stay in the player’s browser until they choose Save in the song library. Saving uploads the selected audio, chart, and optional background to their account. They are not included in this repository and do not transfer between site origins. Automatic charts approximate musical attacks and pitch; they are not exact multi-instrument transcriptions. Use Scan song & rebuild to regenerate an imported track. Practice mode disables failure. External Google Fonts are optional; system fonts serve as fallback.
 
-## Record your own chart
+## Song Creation mode
 
-Click **Edit**, import your song and background, and choose **Record blank run**. The four-lane playfield starts empty. Press D/F/J/K to create visible notes at the hit line; hold a key to draw a hold note. Notes remain in your chart as the song plays. Recording has no misses or life loss. To add another layer instead of starting blank, check **Keep existing notes**. Undo restores the previous take.
+Choose **Song Creation** in the left sidebar. Choose a song and optional background, then **Play & Create Notes**. Empty lanes play your music while D/F/J/K presses create visible notes; holding a key creates a long note. Creation starts with a new song selection and keeps a separate draft while switching between modes. Existing songs have no Edit button.
 
-Click **Finish** or press Escape to reveal the fine-tuning tools. Select a note in the timeline, adjust its time, lane, or hold duration, or nudge it by 10 ms. Use **Preview** to watch your chart play normally. Choose **Easy / Normal / Hard** and a **level rating from 1 to 40**, then **Save Song** or **Upload Song** directly from the editor. Difficulty changes preserve recorded notes. Both local saves and uploads retain the rating; saved and shared song lists display it.
+After **Finish** or Escape, fine-tune timing, lane, and hold length in the timeline. **Align this range** or **Align whole song** snaps notes to the chosen BPM, first-beat offset, and quarter/eighth/sixteenth-note grid. Notes aligned to the same time receive the simultaneous-note glow when **Glow for simultaneous notes** is enabled. Preview shows the same glow as gameplay. Alignment rejects overlapping notes without discarding them; Undo restores the previous timings.
+
+For a retake, set **From / To** song times and press **Retake this section**. Recording starts at From and stops at To, replacing only notes in that interval. Notes outside it remain intact. Holds crossing either boundary must be kept outside the interval by adjusting its bounds. Undo restores the previous take. **Use current position + 10s** sets a quick range; scrub to any position first.
+
+Choose **Easy / Normal / Hard** and a **level rating from 1 to 40**, then **Save Song** or **Upload Song**. Both paths preserve your chart, scene, rating, and glow setting. Difficulty changes preserve recorded notes. Back to songs returns to the separate Play Songs mode.
