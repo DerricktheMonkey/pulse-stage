@@ -67,3 +67,9 @@ npm test
 ## Notes
 
 Imports stay in the player’s browser until they choose Save in the song library. Saving uploads the selected audio, chart, and optional background to their account. They are not included in this repository and do not transfer between site origins. Automatic charts approximate musical attacks and pitch; they are not exact multi-instrument transcriptions. Use Scan song & rebuild to regenerate an imported track. Practice mode disables failure. External Google Fonts are optional; system fonts serve as fallback.
+
+## Record your own chart
+
+Click **Edit**, then **Import song** and **Import background**. Songs imported from the editor start with a blank chart. Click **Record** and press D/F/J/K as the song plays; taps create notes and longer presses create holds. Simultaneous presses create chords. Use 0.5× or 0.75× playback for tricky sections. Recording adds to existing notes; **Clear chart** starts fresh and **Undo** restores the previous chart or take.
+
+Click **Finish** (or Escape) to stop. Select a note in the waveform timeline or note list, set its exact time, lane, or hold length, and **Apply changes**. The nudge buttons move a note by 10 ms. Scrub the song position and use **Preview** to check your changes. **Done editing** returns to gameplay; **Save Song** keeps the full level on this device. The life bar remains visible without a numeric counter or label.
