@@ -9,17 +9,17 @@ A browser rhythm game with custom songs, automatic audio scanning, scene-matched
 ## How to play
 
 - Press **D, F, J, K** or tap the four lanes. Hold keys for long notes.
-- Press **Escape** for Resume, Restart Song, or Return to Menu.
+- Play requests browser fullscreen and fills the viewport. Press **Escape** to pause; choose Resume, Restart Song, or Return to Menu.
 - Normal charts include long hold notes: keep the same lane pressed until the note ends.
-- Hard charts include simultaneous notes: press both lanes together.
-- Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
+- Hard charts include simultaneous notes: matching warm glows and diamond markers show which lanes to press together.
+- **S rank** requires every note to be Perfect. A full combo with any Great or Good earns a lower rank.\n- Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
 - Older slide charts automatically load as same-lane holds. Click **Scan song & rebuild** to regenerate a chart.
 
 ## Save and upload songs
 
 After importing a song and optional background, use the buttons directly below the imports:
 
-- **Save Song** keeps the audio, background, chart, and timing settings on this device. Open **saved songs on this device** to load or delete them. Saving the same song and difficulty again updates its copy.
+- **Save Song** keeps the audio, background, chart, and timing settings on this device. Open the prominent **Saved Songs** button to load or delete them. Saving the same song and difficulty again updates its copy.
 - **Upload Song** opens the hosted upload form with the current song, background, and chart attached. From GitHub Pages it transfers those files to the upload tab so you do not need to import them again. Sign in and choose your creator name before uploading.
 
 Local saves require browser storage and are removed if you clear site data. Online uploads still require access to the hosted library.
