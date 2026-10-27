@@ -4,18 +4,27 @@
 
 > **Vibecoded with ChatGPT/Codex.** Derrick Chu provided the concept, feature requests, and design direction; ChatGPT/Codex generated and revised the implementation.
 
-A browser rhythm game with custom songs, automatic audio scanning, scene-matched backgrounds and tiles, slide notes, simultaneous chords, a life bar, and a chart editor.
+A browser rhythm game with custom songs, automatic audio scanning, scene-matched backgrounds and tiles, hold notes, simultaneous chords, a life bar, and a chart editor.
 
 ## How to play
 
 - Press **D, F, J, K** or tap the four lanes. Hold keys for long notes.
 - Press **Escape** for Resume, Restart Song, or Return to Menu.
-- Normal charts include slides: move into the neighboring lane halfway through the note.
+- Normal charts include long hold notes: keep the same lane pressed until the note ends.
 - Hard charts include simultaneous notes: press both lanes together.
 - Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
-- Click **Scan song & rebuild** to add the new patterns to an older chart.
+- Older slide charts automatically load as same-lane holds. Click **Scan song & rebuild** to regenerate a chart.
 
-## Saved songs and sharing
+## Save and upload songs
+
+After importing a song and optional background, use the buttons directly below the imports:
+
+- **Save Song** keeps the audio, background, chart, and timing settings on this device. Open **saved songs on this device** to load or delete them. Saving the same song and difficulty again updates its copy.
+- **Upload Song** opens the hosted upload form with the current song, background, and chart attached. From GitHub Pages it transfers those files to the upload tab so you do not need to import them again. Sign in and choose your creator name before uploading.
+
+Local saves require browser storage and are removed if you clear site data. Online uploads still require access to the hosted library.
+
+## Online song library
 
 The [hosted song library](https://pulse-stage-derrick.utexas.chatgpt.site/?library=1) stores audio, charts, and optional backgrounds in a database-backed service. Sign in to save tracks privately, publish them to other authorized visitors, copy links, or delete your own uploads. Audio uploads are limited to 25 MB and backgrounds to 20 MB. Only publish music you created or have permission to share.
 
@@ -38,7 +47,7 @@ Open http://localhost:8000. Import audio or choose Play the demo, then Play Trac
 - `worker/api.js`: authenticated save/share API with D1 records and R2 media.
 - `drizzle/`: database schema migration.
 - `scripts/build.mjs`: bundles browser assets and API into the hosted Worker.
-- `tests/`: gameplay, scanning, slide controls, palette, and API permission checks.
+- `tests/`: gameplay, scanning, hold controls, palette, and API permission checks.
 
 The shared library requires the hosted backend; a static local server provides local gameplay only.
 

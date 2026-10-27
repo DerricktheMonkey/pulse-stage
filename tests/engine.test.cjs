@@ -4,7 +4,7 @@ const rate=11025,samples=new Float32Array(rate*12);
 for(let beat=1;beat<24;beat++){let start=Math.floor(beat*.5*rate);for(let i=0;i<500;i++)samples[start+i]=Math.sin(i*.14)*Math.exp(-i/100);}
 for(const difficulty of ['easy','normal','hard']){
  const chart=E.analyze(samples,rate,difficulty);
- assert.equal(chart.bpm,120);assert(chart.notes.length>=23);if(difficulty==='normal')assert(chart.notes.some(n=>n.kind==='slide'));if(difficulty==='hard')assert(chart.notes.some((n,i)=>i&&n.time===chart.notes[i-1].time));
+ assert.equal(chart.bpm,120);assert(chart.notes.length>=23);if(difficulty==='normal')assert(chart.notes.some(n=>n.duration>0));if(difficulty==='hard')assert(chart.notes.some((n,i)=>i&&n.time===chart.notes[i-1].time));
  assert(chart.notes.every(n=>Math.abs(n.time/.5-Math.round(n.time/.5))<.07));
  E.validateChart(chart,12);
 }
@@ -22,4 +22,4 @@ assert(pitched.notes.every(n=>tones.some((_,i)=>Math.abs(n.time-(.5+i*.6))<.06))
 let health=100;for(let i=0;i<9;i++)health=E.nextHealth(health,'MISS');assert.equal(health,0);assert.equal(E.nextHealth(99,'PERFECT'),100);assert.equal(E.nextHealth(10,'PERFECT'),12);assert.equal(E.nextHealth(10,'GREAT'),11);assert.equal(E.nextHealth(10,'GOOD'),10);
 console.log('PASS: pitched song scanning, pitch-to-lane mapping, wider hit window and life depletion/recovery.');
 
-assert.equal(E.judgement(.115),'PERFECT');assert.equal(E.judgement(.13),'GREAT');assert.equal(E.judgement(.17),'GOOD');assert.throws(()=>E.validateChart({notes:[{time:1,lane:0,kind:'slide',endLane:3,duration:.4}]},5));
+assert.equal(E.judgement(.115),'PERFECT');assert.equal(E.judgement(.13),'GREAT');assert.equal(E.judgement(.17),'GOOD');const legacy=E.validateChart({notes:[{time:1,lane:0,kind:'slide',endLane:1,duration:.4}]},5);assert.equal(legacy[0].duration,.4);assert(!('kind' in legacy[0]));assert(!('endLane' in legacy[0]));

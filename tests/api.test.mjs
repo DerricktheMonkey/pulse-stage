@@ -13,11 +13,11 @@ assert.equal((await call('/api/songs/'+id)).status,404);assert.equal((await call
 assert.equal((await (await call('/api/songs?mine=1',{},'owner')).json()).songs.length,1);
 assert.equal((await (await call('/api/songs')).json()).songs.length,0);
 assert.equal((await call('/api/songs/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:'{"shared":true}'},'owner')).status,200);
-const shared=await (await call('/api/songs/'+id)).json();assert.equal(shared.chart.notes[0].kind,'slide');assert(!('owner_id' in shared));assert.equal(shared.creator,'Player One');
+const shared=await (await call('/api/songs/'+id)).json();assert.equal(shared.chart.notes[0].duration,.4);assert(!('kind' in shared.chart.notes[0]));assert(!('owner_id' in shared));assert.equal(shared.creator,'Player One');
 assert.equal((await call('/api/songs/'+id+'/audio')).status,200);
 assert.equal((await call('/api/songs/'+id,{method:'DELETE'},'other')).status,403);
 assert.equal((await call('/api/songs/'+id,{method:'DELETE'},'owner')).status,200);assert.equal(objects.size,0);
 const bad=form();bad.set('chart',JSON.stringify({notes:[{time:1,lane:7}]}));assert.equal((await call('/api/songs',{method:'POST',body:bad},'owner')).status,400);
 const cross=new Request('https://stage.test/api/songs',{method:'POST',headers:{Origin:'https://evil.test','oai-authenticated-user-id':'owner'},body:form()});assert.equal((await worker.fetch(cross,{DB,BUCKET},{})).status,403);
 const landing=await call('/');assert.equal(landing.status,200);assert((await landing.text()).includes('pauseMenu'));assert.equal((await call('/library.js')).status,200);
-console.log('PASS: database migration, authenticated saves, private media, public sharing, ownership, delete cleanup, slide chart round-trip, CSRF and Worker assets.');
+console.log('PASS: database migration, authenticated saves, private media, public sharing, ownership, delete cleanup, hold chart round-trip, CSRF and Worker assets.');
