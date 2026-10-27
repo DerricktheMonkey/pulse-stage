@@ -1,5 +1,7 @@
 # Pulse Stage
 
+## [▶ Play Game](https://derrickthemonkey.github.io/pulse-stage/)
+
 > **Vibecoded with ChatGPT/Codex.** Derrick Chu provided the concept, feature requests, and design direction; ChatGPT/Codex generated and revised the implementation.
 
 A browser rhythm game with local song imports, automatic audio scanning, four-key gameplay, custom image/video backgrounds, scene-matched tile colors, hit effects, a life bar, and a chart editor.
@@ -13,10 +15,6 @@ python -m http.server 8000
 ```
 
 Open http://localhost:8000. Import audio or choose Play the demo, then Play Track. Use D, F, J, K or tap lanes. Escape pauses. Hold keys for long notes.
-
-## Publish with GitHub Pages
-
-In repository Settings > Pages, choose Deploy from a branch, main, and / (root), then Save. GitHub will show your game URL after deployment. Repository visibility and plan affect Pages availability.
 
 ## Files
 
