@@ -4,7 +4,7 @@ const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 function identity(request){return request.headers.get('oai-authenticated-user-id')||null;}
 function requireUser(request){const id=identity(request);if(!id)throw fail('Sign in to save your songs.',401);return id;}
 function cleanText(value,max,label){const text=String(value||'').trim();if(!text||text.length>max)throw fail(label+' is required (up to '+max+' characters).');return text;}
-function publicSong(row){return {id:row.id,title:row.title,creator:row.creator,difficulty:row.difficulty,duration:row.duration,noteCount:row.note_count,shared:!!row.shared,createdAt:row.created_at,hasBackground:!!row.background_key};}
+function publicSong(row){return {id:row.id,title:row.title,creator:row.creator,difficulty:row.difficulty,rating:row.rating??(row.chart_json?JSON.parse(row.chart_json).rating:null)??null,duration:row.duration,noteCount:row.note_count,shared:!!row.shared,createdAt:row.created_at,hasBackground:!!row.background_key};}
 async function authorizedSong(env,id,user){const row=await env.DB.prepare('SELECT * FROM songs WHERE id = ?').bind(id).first();if(!row||(!row.shared&&row.owner_id!==user))throw fail('Song not found.',404);return row;}
 export async function api(request,env,ctx){
  const url=new URL(request.url),path=url.pathname,user=identity(request);
@@ -14,7 +14,7 @@ export async function api(request,env,ctx){
   if(!['GET','HEAD'].includes(request.method)&&request.headers.get('Origin')!==url.origin)throw fail('Please save from this game’s own page.',403);
   if(path==='/api/songs'&&request.method==='GET'){
    const mine=url.searchParams.get('mine')==='1',q=String(url.searchParams.get('q')||'').slice(0,80);if(mine)requireUser(request);
-   const rows=await env.DB.prepare('SELECT id,title,creator,difficulty,duration,note_count,shared,created_at,background_key FROM songs WHERE '+(mine?'owner_id = ?':'shared = 1')+' AND title LIKE ? ORDER BY created_at DESC LIMIT 60').bind(...(mine?[user,'%'+q+'%']:['%'+q+'%'])).all();return json({songs:rows.results.map(publicSong)});
+   const rows=await env.DB.prepare('SELECT id,title,creator,difficulty,duration,note_count,shared,created_at,background_key,json_extract(chart_json, \'$.rating\') AS rating FROM songs WHERE '+(mine?'owner_id = ?':'shared = 1')+' AND title LIKE ? ORDER BY created_at DESC LIMIT 60').bind(...(mine?[user,'%'+q+'%']:['%'+q+'%'])).all();return json({songs:rows.results.map(publicSong)});
   }
   if(path==='/api/songs'&&request.method==='POST'){
    const owner=requireUser(request),length=Number(request.headers.get('content-length'));if(length>49*1024*1024)throw fail('Upload must be smaller than 49 MB.',413);
@@ -25,8 +25,9 @@ export async function api(request,env,ctx){
    if(typeof rawChart!=='string'||rawChart.length>2000000)throw fail('Chart is missing or too large.');let chart;try{chart=JSON.parse(rawChart);}catch{throw fail('Chart JSON is invalid.');}
    const duration=Number(form.get('duration'));if(!Number.isFinite(duration)||duration<=0||duration>1200)throw fail('Song must be shorter than 20 minutes.');
    let notes;try{notes=globalThis.RhythmEngine.validateChart(chart,duration);}catch(error){throw fail(error.message);}if(!notes.length)throw fail('Add notes before saving your song.');
+   const rating=chart.rating??null;if(rating!==null&&(!Number.isInteger(rating)||rating<1||rating>40))throw fail('Level rating must be a whole number from 1 to 40.');
    const difficulty=['easy','normal','hard'].includes(form.get('difficulty'))?form.get('difficulty'):'normal',shared=form.get('shared')==='1'?1:0,id=crypto.randomUUID(),audioKey='songs/'+owner+'/'+id+'/audio',bgKey=background?'songs/'+owner+'/'+id+'/background':null,offset=Math.max(-1000,Math.min(1000,Number(chart.offsetMs)||0));
-   await env.BUCKET.put(audioKey,audio.stream(),{httpMetadata:{contentType:audio.type}});try{if(background)await env.BUCKET.put(bgKey,background.stream(),{httpMetadata:{contentType:background.type}});await env.DB.prepare('INSERT INTO songs (id,owner_id,title,creator,difficulty,duration,note_count,chart_json,audio_key,audio_type,background_key,background_type,shared,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,owner,title,creator,difficulty,duration,notes.length,JSON.stringify({notes,offsetMs:offset,bpm:Number(chart.bpm)||120}),audioKey,audio.type,bgKey,background?.type||null,shared,new Date().toISOString()).run();}catch(error){await env.BUCKET.delete([audioKey,...(bgKey?[bgKey]:[])]);throw error;}return json({id,shared:!!shared},201);
+   await env.BUCKET.put(audioKey,audio.stream(),{httpMetadata:{contentType:audio.type}});try{if(background)await env.BUCKET.put(bgKey,background.stream(),{httpMetadata:{contentType:background.type}});await env.DB.prepare('INSERT INTO songs (id,owner_id,title,creator,difficulty,duration,note_count,chart_json,audio_key,audio_type,background_key,background_type,shared,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,owner,title,creator,difficulty,duration,notes.length,JSON.stringify({rating,customChart:!!chart.customChart,notes,offsetMs:offset,bpm:Number(chart.bpm)||120}),audioKey,audio.type,bgKey,background?.type||null,shared,new Date().toISOString()).run();}catch(error){await env.BUCKET.delete([audioKey,...(bgKey?[bgKey]:[])]);throw error;}return json({id,shared:!!shared},201);
   }
   const match=path.match(/^\/api\/songs\/([a-zA-Z0-9-]+)(?:\/(audio|background))?$/);
   if(match){const [,id,asset]=match,row=await authorizedSong(env,id,user);
