@@ -10,8 +10,8 @@ A browser rhythm game with custom songs, automatic audio scanning, scene-matched
 
 - Press **D, F, J, K** or tap the four lanes. Hold keys for long notes.
 - Play requests browser fullscreen and fills the viewport. Press **Escape** to pause; choose Resume, Restart Song, or Return to Menu.
-- Normal charts include long hold notes: keep the same lane pressed until the note ends.
-- Hard charts include simultaneous notes: matching warm glows and diamond markers show which lanes to press together.
+- Normal charts include long hold notes: keep the same lane pressed as the ring shrinks. The bright tail cap reaches the hit line and a **RELEASE** cue shows when to let go.
+- Hard charts include simultaneous notes: matching warm glows show which lanes to press together.
 - **S rank** requires every note to be Perfect. A full combo with any Great or Good earns a lower rank.\n- Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
 - Older slide charts automatically load as same-lane holds. Click **Scan song & rebuild** to regenerate a chart.
 
