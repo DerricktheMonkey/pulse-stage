@@ -1,5 +1,7 @@
 # Pulse Stage
 
+> **Vibecoded with ChatGPT/Codex.** Derrick Chu provided the concept, feature requests, and design direction; ChatGPT/Codex generated and revised the implementation.
+
 A browser rhythm game with local song imports, automatic audio scanning, four-key gameplay, custom image/video backgrounds, scene-matched tile colors, hit effects, a life bar, and a chart editor.
 
 ## Play locally
