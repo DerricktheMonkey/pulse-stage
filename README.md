@@ -32,7 +32,7 @@ Local saves require browser storage and are removed if you clear site data. Onli
 
 **Song library opens in an on-page popup**, including on GitHub Pages. Use **On this device**, **Community**, or **My saved songs**. Online requests use the hosted backend with your existing sign-in; account or connection errors leave the popup and device saves usable. If sign-in is needed, the sign-in link uses the current tab.
 
-The [hosted song library](https://pulse-stage-derrick.utexas.chatgpt.site/?library=1) stores audio, charts, and optional backgrounds in a database-backed service. Sign in to save tracks privately, publish them to other authorized visitors, copy links, or delete your own uploads. Audio uploads are limited to 25 MB and backgrounds to 20 MB. Only publish music you created or have permission to share.
+The [hosted song library](https://pulse-stage-derrick.utexas.chatgpt.site/?library=1) stores audio, charts, and optional backgrounds in a database-backed service. Sign in to save tracks privately, publish them to other authorized visitors, copy links, or delete your own uploads. Audio uploads are limited to 25 MB and background images to 40 MB (videos to 20 MB). Only publish music you created or have permission to share.
 
 **Access limitation:** this workspace currently blocks public Site publication. The GitHub Pages game is public, but the hosted library is restricted to accounts granted access. Anonymous public song sharing is not enabled.
 
@@ -81,3 +81,9 @@ For a retake, set **From / To** song times and press **Retake this section**. Re
 Choose **Easy / Normal / Hard** and a **level rating from 1 to 40**, then **Save Song** or **Upload Song**. Both paths preserve your chart, scene, rating, and glow setting. Difficulty changes preserve recorded notes. Back to songs returns to the separate Play Songs mode.
 
 Song Creation recording and section retakes show a **3–2–1 countdown** before audio and note recording begin. The count-in lasts three real seconds at every playback speed. Escape or Finish during the count-in cancels it and preserves the previous chart. Preview starts immediately.
+
+## 4K scenes and visible holds
+
+Import a 4K image such as 3840 × 2160 PNG, JPEG, or WebP. The playfield displays the original file directly and the background picker shows its dimensions. Local saves, online uploads, and downloads preserve the original bytes; palette matching uses a separate tiny sample. Online background images can be up to **40 MB**, videos up to **20 MB**, and audio up to **25 MB**. Resolution on screen depends on the display and playfield size; smaller images are not converted into 4K.
+
+Hold notes use an opaque colored ribbon with a dark outline, white rails, crossbars, a **HOLD** label, and a wide **END** cap. While held, the hit-line head stays lit, with a larger countdown/release cue. Creation recording and chart previews use the same ribbon renderer as gameplay.
