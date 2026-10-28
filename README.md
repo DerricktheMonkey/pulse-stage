@@ -9,7 +9,7 @@ A browser rhythm game with custom songs, automatic audio scanning, scene-matched
 ## How to play
 
 - Press **D, F, J, K** or tap the four lanes. Hold keys for long notes.
-- Play requests browser fullscreen and fills the viewport. Press **Escape** to pause, then **R** to restart immediately from the pause menu; or choose Resume, Restart Song, Change Song, or Return to Menu.
+- Play requests browser fullscreen and fills the viewport. Press **Escape** to pause, then **Escape again** for the main menu or **R** to restart. Use Resume to continue the run. Holding Escape does not count as two presses.
 - Normal charts include long hold notes: keep the same lane pressed as the ring shrinks. The bright tail cap reaches the hit line and a **RELEASE** cue shows when to let go.
 - Hard charts include simultaneous notes: matching warm glows show which lanes to press together.
 - **S rank** requires every note to be Perfect. A full combo with any Great or Good earns a lower rank.\n- Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
@@ -24,7 +24,7 @@ Use **Change Song** in the game bar or pause menu to choose a saved level or imp
 After importing a song and optional background, use the buttons directly below the imports:
 
 - **Save Song** keeps the audio, background, chart, and timing settings on this device. Open the prominent **Saved Songs** button to load or delete them. Saving the same song and difficulty again updates its copy.
-- **Upload Song** opens the hosted upload form with the current song, background, and chart attached. From GitHub Pages it transfers those files to the upload tab so you do not need to import them again. Sign in and choose your creator name before uploading.
+- **Upload Song** opens the on-page upload popup with the current song, background, and chart attached. Uploads and the library stay in the game tab on both GitHub Pages and the hosted game. If sign-in is needed, the pending level is kept in browser storage and restored after sign-in in the same tab. Choose your creator name before uploading.
 
 Local saves require browser storage and are removed if you clear site data. Online uploads still require access to the hosted library.
 
@@ -44,7 +44,7 @@ Serve this folder over HTTP (the audio scanner uses a Web Worker):
 python -m http.server 8000 --directory public
 ```
 
-Open http://localhost:8000. Import audio or choose Play the demo, then Play Track. Use D, F, J, K or tap lanes. Escape pauses. Hold keys for long notes.
+Open http://localhost:8000. Import audio or choose Play the demo, then Play Track. Use D, F, J, K or tap lanes. Escape pauses; a second Escape returns to the main menu. Esc then R restarts. Hold keys for long notes.
 
 ## Files
 
