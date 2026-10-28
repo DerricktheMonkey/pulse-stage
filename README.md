@@ -86,4 +86,4 @@ Song Creation recording and section retakes show a **3–2–1 countdown** befor
 
 Import a 4K image such as 3840 × 2160 PNG, JPEG, or WebP. The playfield displays the original file directly and the background picker shows its dimensions. Local saves, online uploads, and downloads preserve the original bytes; palette matching uses a separate tiny sample. Online background images can be up to **40 MB**, videos up to **20 MB**, and audio up to **25 MB**. Resolution on screen depends on the display and playfield size; smaller images are not converted into 4K.
 
-Hold notes use an opaque colored ribbon with a dark outline, white rails, crossbars, a **HOLD** label, and a wide **END** cap. While held, the hit-line head stays lit, with a larger countdown/release cue. Creation recording and chart previews use the same ribbon renderer as gameplay.
+Hold notes use the original ribbon and end-marker design, with a slightly more opaque body for readability. The original hold countdown and release cue remain.
