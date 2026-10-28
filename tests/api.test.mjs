@@ -22,3 +22,12 @@ const bad=form();bad.set('chart',JSON.stringify({notes:[{time:1,lane:7}]}));asse
 const cross=new Request('https://stage.test/api/songs',{method:'POST',headers:{Origin:'https://evil.test','oai-authenticated-user-id':'owner'},body:form()});assert.equal((await worker.fetch(cross,{DB,BUCKET},{})).status,403);
 const landing=await call('/');assert.equal(landing.status,200);assert((await landing.text()).includes('pauseMenu'));assert.equal((await call('/library.js')).status,200);
 console.log('PASS: database migration, authenticated saves, private media, public sharing, ownership, delete cleanup, hold chart round-trip, CSRF and Worker assets.');
+
+const gameOrigin='https://derrickthemonkey.github.io';
+const preflight=await worker.fetch(new Request('https://stage.test/api/songs',{method:'OPTIONS',headers:{Origin:gameOrigin,'Access-Control-Request-Method':'GET','Access-Control-Request-Headers':'Content-Type'}}),{DB,BUCKET},{});assert.equal(preflight.status,204);assert.equal(preflight.headers.get('Access-Control-Allow-Origin'),gameOrigin);assert.equal(preflight.headers.get('Access-Control-Allow-Credentials'),'true');
+const foreign=await worker.fetch(new Request('https://stage.test/api/songs',{method:'OPTIONS',headers:{Origin:'https://evil.test'}}),{DB,BUCKET},{});assert.equal(foreign.status,403);assert.equal(foreign.headers.get('Access-Control-Allow-Origin'),null);
+const spoof=await worker.fetch(new Request('https://stage.test/api/songs',{method:'OPTIONS',headers:{Origin:gameOrigin,'Access-Control-Request-Headers':'oai-authenticated-user-id'}}),{DB,BUCKET},{});assert.equal(spoof.status,403);
+const guest=await worker.fetch(new Request('https://stage.test/api/songs?mine=1',{headers:{Origin:gameOrigin}}),{DB,BUCKET},{});assert.equal(guest.status,401);assert.equal(guest.headers.get('Access-Control-Allow-Origin'),gameOrigin);
+const online=await worker.fetch(new Request('https://stage.test/api/songs',{headers:{Origin:gameOrigin}}),{DB,BUCKET},{});assert.equal(online.status,200);assert.equal(online.headers.get('Access-Control-Allow-Origin'),gameOrigin);
+const noOwner=await worker.fetch(new Request('https://stage.test/api/songs',{method:'POST',headers:{Origin:gameOrigin},body:form()}),{DB,BUCKET},{});assert.equal(noOwner.status,401);
+console.log('PASS: trusted game-origin CORS, preflight, disallowed origins/identity headers and unchanged sign-in requirements.');

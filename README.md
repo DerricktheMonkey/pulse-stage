@@ -9,7 +9,7 @@ A browser rhythm game with custom songs, automatic audio scanning, scene-matched
 ## How to play
 
 - Press **D, F, J, K** or tap the four lanes. Hold keys for long notes.
-- Play requests browser fullscreen and fills the viewport. Press **Escape** to pause; choose Resume, Restart Song, Change Song, or Return to Menu.
+- Play requests browser fullscreen and fills the viewport. Press **Escape** to pause, then **R** to restart immediately from the pause menu; or choose Resume, Restart Song, Change Song, or Return to Menu.
 - Normal charts include long hold notes: keep the same lane pressed as the ring shrinks. The bright tail cap reaches the hit line and a **RELEASE** cue shows when to let go.
 - Hard charts include simultaneous notes: matching warm glows show which lanes to press together.
 - **S rank** requires every note to be Perfect. A full combo with any Great or Good earns a lower rank.\n- Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
@@ -29,6 +29,8 @@ After importing a song and optional background, use the buttons directly below t
 Local saves require browser storage and are removed if you clear site data. Online uploads still require access to the hosted library.
 
 ## Online song library
+
+**Song library opens in an on-page popup**, including on GitHub Pages. Use **On this device**, **Community**, or **My saved songs**. Online requests use the hosted backend with your existing sign-in; account or connection errors leave the popup and device saves usable. If sign-in is needed, the sign-in link uses the current tab.
 
 The [hosted song library](https://pulse-stage-derrick.utexas.chatgpt.site/?library=1) stores audio, charts, and optional backgrounds in a database-backed service. Sign in to save tracks privately, publish them to other authorized visitors, copy links, or delete your own uploads. Audio uploads are limited to 25 MB and backgrounds to 20 MB. Only publish music you created or have permission to share.
 

@@ -6,12 +6,12 @@ function requireUser(request){const id=identity(request);if(!id)throw fail('Sign
 function cleanText(value,max,label){const text=String(value||'').trim();if(!text||text.length>max)throw fail(label+' is required (up to '+max+' characters).');return text;}
 function publicSong(row){return {id:row.id,title:row.title,creator:row.creator,difficulty:row.difficulty,rating:row.rating??(row.chart_json?JSON.parse(row.chart_json).rating:null)??null,duration:row.duration,noteCount:row.note_count,shared:!!row.shared,createdAt:row.created_at,hasBackground:!!row.background_key};}
 async function authorizedSong(env,id,user){const row=await env.DB.prepare('SELECT * FROM songs WHERE id = ?').bind(id).first();if(!row||(!row.shared&&row.owner_id!==user))throw fail('Song not found.',404);return row;}
-export async function api(request,env,ctx){
+async function libraryAPI(request,env,ctx){
  const url=new URL(request.url),path=url.pathname,user=identity(request);
  try{
   if(path==='/api/me')return json({signedIn:!!user});
   if(!env.DB||!env.BUCKET)throw fail('The song library is not configured yet.',503);
-  if(!['GET','HEAD'].includes(request.method)&&request.headers.get('Origin')!==url.origin)throw fail('Please save from this game’s own page.',403);
+  if(!['GET','HEAD'].includes(request.method)&&request.headers.get('Origin')!==url.origin&&request.headers.get('Origin')!==GAME_ORIGIN)throw fail('Please save from this game’s own page.',403);
   if(path==='/api/songs'&&request.method==='GET'){
    const mine=url.searchParams.get('mine')==='1',q=String(url.searchParams.get('q')||'').slice(0,80);if(mine)requireUser(request);
    const rows=await env.DB.prepare('SELECT id,title,creator,difficulty,duration,note_count,shared,created_at,background_key,json_extract(chart_json, \'$.rating\') AS rating FROM songs WHERE '+(mine?'owner_id = ?':'shared = 1')+' AND title LIKE ? ORDER BY created_at DESC LIMIT 60').bind(...(mine?[user,'%'+q+'%']:['%'+q+'%'])).all();return json({songs:rows.results.map(publicSong)});
@@ -38,3 +38,6 @@ export async function api(request,env,ctx){
   return json({error:'Not found.'},404);
  }catch(error){return json({error:error.status?error.message:'Could not complete the library request. Try again.'},error.status||500);}
 }
+
+const GAME_ORIGIN='https://derrickthemonkey.github.io';
+export async function api(request,env,ctx){const origin=request.headers.get('Origin'),trusted=origin===GAME_ORIGIN;if(request.method==='OPTIONS'){if(!trusted)return json({error:'Origin not allowed.'},403);const headers=request.headers.get('Access-Control-Request-Headers')||'';if(headers.split(',').some(h=>h.trim()&&!['content-type','range'].includes(h.trim().toLowerCase())))return json({error:'Header not allowed.'},403);return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':GAME_ORIGIN,'Access-Control-Allow-Credentials':'true','Access-Control-Allow-Methods':'GET, HEAD, POST, PATCH, DELETE, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Range','Access-Control-Max-Age':'600',Vary:'Origin'}});}const response=await libraryAPI(request,env,ctx);if(trusted){response.headers.set('Access-Control-Allow-Origin',GAME_ORIGIN);response.headers.set('Access-Control-Allow-Credentials','true');response.headers.set('Access-Control-Expose-Headers','Content-Type, Content-Length, Content-Range, Accept-Ranges');response.headers.append('Vary','Origin');}return response;}
