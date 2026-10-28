@@ -1,4 +1,4 @@
-const MAX_AUDIO=25*1024*1024,MAX_BACKGROUND_IMAGE=40*1024*1024,MAX_BACKGROUND_VIDEO=20*1024*1024;
+const MAX_AUDIO=25*1024*1024,MAX_BACKGROUND_IMAGE=50*1024*1024,MAX_BACKGROUND_VIDEO=50*1024*1024;
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 function identity(request){return request.headers.get('oai-authenticated-user-id')||null;}
@@ -17,11 +17,11 @@ async function libraryAPI(request,env,ctx){
    const rows=await env.DB.prepare('SELECT id,title,creator,difficulty,duration,note_count,shared,created_at,background_key,json_extract(chart_json, \'$.rating\') AS rating FROM songs WHERE '+(mine?'owner_id = ?':'shared = 1')+' AND title LIKE ? ORDER BY created_at DESC LIMIT 60').bind(...(mine?[user,'%'+q+'%']:['%'+q+'%'])).all();return json({songs:rows.results.map(publicSong)});
   }
   if(path==='/api/songs'&&request.method==='POST'){
-   const owner=requireUser(request),length=Number(request.headers.get('content-length'));if(length>70*1024*1024)throw fail('Upload must be smaller than 70 MB.',413);
+   const owner=requireUser(request),length=Number(request.headers.get('content-length'));if(length>80*1024*1024)throw fail('Upload must be smaller than 80 MB.',413);
    const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM songs WHERE owner_id = ?').bind(owner).first();if(count.count>=40)throw fail('Your library holds up to 40 songs. Delete an older save first.');
    const form=await request.formData(),title=cleanText(form.get('title'),100,'Song title'),creator=cleanText(form.get('creator'),50,'Creator name'),audio=form.get('audio'),background=form.get('background'),rawChart=form.get('chart');
    if(!audio||typeof audio==='string'||!audio.size||audio.size>MAX_AUDIO||!/^audio\//.test(audio.type))throw fail('Choose an audio file up to 25 MB.');
-   if(background&&(typeof background==='string'||background.size>(background.type?.startsWith('image/')?MAX_BACKGROUND_IMAGE:MAX_BACKGROUND_VIDEO)||! /^(image|video)\//.test(background.type)||/svg/i.test(background.type)))throw fail('Background images can be up to 40 MB and videos up to 20 MB (SVG is unsupported).');
+   if(background&&(typeof background==='string'||background.size>(background.type?.startsWith('image/')?MAX_BACKGROUND_IMAGE:MAX_BACKGROUND_VIDEO)||! /^(image|video)\//.test(background.type)||/svg/i.test(background.type)))throw fail('Background images and videos can be up to 50 MB (SVG is unsupported).');
    if(typeof rawChart!=='string'||rawChart.length>2000000)throw fail('Chart is missing or too large.');let chart;try{chart=JSON.parse(rawChart);}catch{throw fail('Chart JSON is invalid.');}
    const duration=Number(form.get('duration'));if(!Number.isFinite(duration)||duration<=0||duration>1200)throw fail('Song must be shorter than 20 minutes.');
    let notes;try{notes=globalThis.RhythmEngine.validateChart(chart,duration);}catch(error){throw fail(error.message);}if(!notes.length)throw fail('Add notes before saving your song.');

@@ -85,7 +85,7 @@ create trigger validate_pulse_song before insert or update on public.pulse_songs
 
 -- Every file stays in a private bucket. Public access is granted only while its song is shared.
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
- values('pulse-stage-media','pulse-stage-media',false,41943040,
+ values('pulse-stage-media','pulse-stage-media',false,52428800,
  array['audio/*','video/*','image/png','image/jpeg','image/webp','image/gif','image/avif','image/bmp']);
 create policy pulse_media_reads on storage.objects for select to anon,authenticated using (
  bucket_id='pulse-stage-media' and exists(select 1 from public.pulse_songs s
@@ -112,9 +112,9 @@ begin
     a->>'mimetype' is distinct from s.audio_type then raise exception 'Upload the matching audio file (up to 25 MB) first'; end if;
  if s.background_key is not null then
    select metadata into b from storage.objects where bucket_id='pulse-stage-media' and name=s.background_key;
-   max_background := case when s.background_type like 'image/%' then 41943040 else 20971520 end;
+   max_background := 52428800;
    if b is null or (b->>'size') is null or (b->>'size')::bigint not between 1 and max_background or
-      b->>'mimetype' is distinct from s.background_type then raise exception 'Upload the matching background first (images 40 MB, videos 20 MB)'; end if;
+      b->>'mimetype' is distinct from s.background_type then raise exception 'Upload the matching background first (images and videos 50 MB)'; end if;
  end if;
  update public.pulse_songs set ready=true where id=s.id;
  return s.id;
