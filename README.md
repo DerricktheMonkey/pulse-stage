@@ -105,12 +105,3 @@ Both Upload Song and the library upload form automatically prepare backgrounds l
 Downloads play at the same pixel dimensions. Lossy encoding can reduce detail; downloading cannot reconstruct the exact original quality. Video conversion runs in real time: keep the tab visible. Unsupported codecs, sources over 250 MiB, images over 40 million pixels, clips over 20 minutes, animations over 3,000 frames, or files that still cannot fit produce an error instead of resizing or uploading a partial clip. Successful conversions are reused for retries. Audio uploads remain limited to 25 MiB.
 
 No additional SQL migration is required for compression. Existing projects still need the background-limit patch above if it has not been applied. Automated tests cover conversion and UI behavior with mocked browser codecs; actual browser codec support and live Supabase uploads still require verification.
-
-
-## Immersive camera
-
-Gameplay now renders the imported background on a deeper 3D plane behind the note field, with coordinated angle changes about every six seconds and smooth 2.2-second transitions. Notes and hit effects rotate together; the HUD stays upright. This adds perspective and parallax to existing media rather than reconstructing unseen 3D scenery. Recording and editing remain flat.
-
-Turn off **Immersive camera** in settings to restore the flat 2D view. Reduced-motion preferences also keep the camera flat. Camera movement uses song time so pause freezes it and restart resets it. Touch input is inversely projected to match the tilted lanes.
-
-The previous stable version is preserved on [`backup/pre-immersive-2d`](https://github.com/DerricktheMonkey/pulse-stage/tree/backup/pre-immersive-2d), commit `81505e1cd3adcbba97ca419fc6ca610d5db3f5fe`. See [restore details](docs/restore-pre-immersive.md). Song files and database records are separate from this code backup. All 19 automated suites pass; native browser visual verification remains outstanding.
