@@ -16,7 +16,8 @@ The supplied Supabase Project URL and public publishable key are configured. **S
 - Play requests browser fullscreen and fills the viewport. Press **Escape** to pause, then **Escape again** for the main menu or **R** to restart. Use Resume to continue the run. Holding Escape does not count as two presses.
 - Normal charts include long hold notes: keep the same lane pressed as the ring shrinks. The bright tail cap reaches the hit line and a **RELEASE** cue shows when to let go.
 - Hard charts include simultaneous notes: matching warm glows show which lanes to press together.
-- **S rank** requires every note to be Perfect. A full combo with any Great or Good earns a lower rank.\n- Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
+- **S rank** requires every note to be Perfect. A full combo with any Great or Good earns a lower rank.
+- Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
 - Older slide charts automatically load as same-lane holds. Click **Scan song & rebuild** to regenerate a chart.
 
 ## Song selector
@@ -88,10 +89,19 @@ Song Creation recording and section retakes show a **3–2–1 countdown** befor
 
 ## 4K scenes and visible holds
 
-Import a 4K image such as 3840 × 2160 PNG, JPEG, or WebP. The playfield displays the original file directly and the background picker shows its dimensions. Local saves, online uploads, and downloads preserve the original bytes; palette matching uses a separate tiny sample. Online background images and videos can be up to **50 MB**, and audio up to **25 MB**. Resolution on screen depends on the display and playfield size; smaller images are not converted into 4K.
+Import a 4K image such as 3840 × 2160 PNG, JPEG, or WebP. The playfield displays the original file directly and the background picker shows its dimensions. Local saves preserve the original bytes. Under-limit uploads are unchanged; oversized backgrounds use a separate compressed upload copy at the original pixel dimensions. Palette matching uses a separate tiny sample. Online background images and videos can be up to **50 MB**, and audio up to **25 MB**. Resolution on screen depends on the display and playfield size; smaller images are not converted into 4K.
 
 Hold notes use the original ribbon and end-marker design, with a slightly more opaque body for readability. The original hold countdown and release cue remain.
 
 ## Background upload limit update
 
-Background images and videos now accept up to **50 MiB per file**; audio stays at **25 MiB**. For the existing Supabase project, run [increase-background-limit.sql](supabase/increase-background-limit.sql) once in SQL Editor, and ensure the **Storage Settings → Global file size limit** is at least 50 MB. This updates the private bucket and upload-finalization check without deleting songs or files. Supabase Free projects have a 50 MB maximum; this change does not upgrade or charge the project. Refresh the game after applying the patch. Oversize errors now show the actual background size and the limit.
+Background images and videos now accept up to **50 MiB per file**; audio stays at **25 MiB**. For the existing Supabase project, run [increase-background-limit.sql](supabase/increase-background-limit.sql) once in SQL Editor, and ensure the **Storage Settings → Global file size limit** is at least 50 MB. This updates the private bucket and upload-finalization check without deleting songs or files. Supabase Free projects have a 50 MB maximum; this change does not upgrade or charge the project. Refresh the game after applying the patch. Files that cannot be compressed below the limit show a clear error.
+
+
+## Automatic background compression
+
+Both Upload Song and the library upload form automatically prepare backgrounds larger than 50 MiB. A progress display and Cancel button appear during conversion. Static images try PNG optimization first, then WebP; supported videos and animated images are re-encoded using browser codecs at their original width and height, up to 30 fps. Background video audio is omitted. The uploaded copy is verified to have the original dimensions, and the imported original remains untouched for local saves.
+
+Downloads play at the same pixel dimensions. Lossy encoding can reduce detail; downloading cannot reconstruct the exact original quality. Video conversion runs in real time: keep the tab visible. Unsupported codecs, sources over 250 MiB, images over 40 million pixels, clips over 20 minutes, animations over 3,000 frames, or files that still cannot fit produce an error instead of resizing or uploading a partial clip. Successful conversions are reused for retries. Audio uploads remain limited to 25 MiB.
+
+No additional SQL migration is required for compression. Existing projects still need the background-limit patch above if it has not been applied. Automated tests cover conversion and UI behavior with mocked browser codecs; actual browser codec support and live Supabase uploads still require verification.

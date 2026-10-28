@@ -24,7 +24,7 @@ The public key is meant to be visible in a browser. Access control is enforced i
 
 Song Library, upload, and sign-in stay in the existing popup. Anyone can browse and play **published, completed** songs after the backend is connected. To upload, choose **Sign in → Continue on this device**, add a title/creator, then upload. Private songs remain visible only to that device account. The token is stored under the game's origin; another device, another site address, signing out, or clearing browser data does not carry this account over. Use the same game address consistently.
 
-Each account can have 40 levels, including incomplete uploads. Limits: audio 25 MiB, image/video 50 MiB, chart 2 MB, song 20 minutes, 30,000 notes. Files upload to private paths and the level becomes readable to the community only after the server verifies that all expected files have arrived. Original image/audio bytes are retained. Turning publication off prevents new public reads. Deletion first makes a level private, then removes its files and record; a failed cleanup can be retried by its owner.
+Each account can have 40 levels, including incomplete uploads. Limits: audio 25 MiB, image/video 50 MiB, chart 2 MB, song 20 minutes, 30,000 notes. Files upload to private paths and the level becomes readable to the community only after the server verifies that all expected files have arrived. Audio and backgrounds already within the limit retain their original bytes. Oversized backgrounds are automatically re-encoded for upload at the same pixel dimensions; that upload copy can have lower encoding quality. The imported original is kept locally. Turning publication off prevents new public reads. Deletion first makes a level private, then removes its files and record; a failed cleanup can be retried by its owner.
 
 Device sign-in is convenient but not a recoverable cross-device account. Optional email sign-in is described below. It does not automatically merge an existing device account into an email account.
 
@@ -65,3 +65,17 @@ The SQL defines policies for this new backend only. An existing Sites owner ID i
 The game accepts background images and videos up to **50 MiB per file**. For a project installed with the older 40 MiB image / 20 MiB video limits, run [increase-background-limit.sql](increase-background-limit.sql) once in SQL Editor. It changes the private bucket limit and upload-finalization check without deleting any records or files. Audio stays at 25 MiB. In **Storage Settings**, also ensure the global file-size limit is at least 50 MB. Supabase Free projects cannot exceed a 50 MB global maximum; larger files require compression or a plan that permits a higher limit, followed by matching app/database changes. No plan or billing settings are changed by this patch.
 
 After running the patch, refresh the game and retry. Existing local levels keep their original files and do not need to be regenerated.
+
+## Automatic background compression
+
+Both Upload Song buttons prepare oversized backgrounds automatically before upload. Files already within 50 MiB are sent unchanged. For larger files, the game keeps the imported original and creates a separate upload copy:
+
+- Still images are encoded as PNG first, then WebP at progressively lower quality only if necessary. The canvas always uses the decoded source width and height.
+- Videos and supported animated images are converted to a browser-supported WebM/MP4 at the same width and height, at up to 30 fps, with a bitrate targeted below the limit. Background audio is omitted (backgrounds are already muted in the game). The output dimensions are checked before upload.
+- Animation decoding uses ImageDecoder when available; a browser that cannot preserve an animation stops with an error instead of flattening it into a still image.
+- Moving-image conversion runs in real time and may take about the clip's length, or twice that if a lower-bitrate retry is needed. Keep the tab visible. Progress and Cancel are inside the existing popup.
+- Results are cached for that source file during the page session. Cancelling or failing compression does not replace the local original or upload a partial clip.
+
+Playback decodes the uploaded file at its encoded dimensions, so a 3840 × 2160 source remains 3840 × 2160. This does not reconstruct lost encoding quality or the exact original file. Local Save Song retains the imported original; online players receive the upload copy. Source files are limited to 250 MiB, 40 megapixels, and 20 minutes for automatic conversion, and animated image conversions to 3000 frames. If the browser cannot fit the file without changing resolution, it stops rather than silently resizing or truncating it. Audio remains limited to 25 MiB and is not automatically re-encoded.
+
+The automatic-compression logic and integration have automated tests with mocked browser codecs. Real browser video/image encoding and uploads still require testing on the target device.
