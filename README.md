@@ -6,6 +6,10 @@
 
 A browser rhythm game with custom songs, automatic audio scanning, scene-matched backgrounds and tiles, hold notes, simultaneous chords, a life bar, and a chart editor.
 
+## Online uploads: setup pending
+
+The Supabase integration is prepared but **not connected to a project yet**. Gameplay and local saves work. Follow [the Supabase setup guide](supabase/README.md), run [setup.sql](supabase/setup.sql) in your new project, enable device/anonymous sign-ins, and supply the Project URL plus public publishable key in `public/backend-config.js` (and the root GitHub Pages copy). Do not put a secret/service-role key in the game.
+
 ## How to play
 
 - Press **D, F, J, K** or tap the four lanes. Hold keys for long notes.
@@ -24,17 +28,15 @@ Use **Change Song** in the game bar or pause menu to choose a saved level or imp
 After importing a song and optional background, use the buttons directly below the imports:
 
 - **Save Song** keeps the audio, background, chart, and timing settings on this device. Open the prominent **Saved Songs** button to load or delete them. Saving the same song and difficulty again updates its copy.
-- **Upload Song** opens the on-page upload popup with the current song, background, and chart attached. Uploads and the library stay in the game tab on both GitHub Pages and the hosted game. If sign-in is needed, the pending level is kept in browser storage and restored after sign-in in the same tab. Choose your creator name before uploading.
+- **Upload Song** opens the on-page upload popup with the song, background, and chart attached. After Supabase is connected, choose Sign in → Continue on this device to upload; optional email-code accounts can also be configured. No ChatGPT login cookie or new tab is needed. Choose your creator name before uploading.
 
-Local saves require browser storage and are removed if you clear site data. Online uploads still require access to the hosted library.
+Local saves require browser storage and are removed if you clear site data. Online uploads require completing the Supabase setup. Device-account upload controls remain tied to that browser's stored session.
 
 ## Online song library
 
-**Song library opens in an on-page popup**, including on GitHub Pages. Use **On this device**, **Community**, or **My saved songs**. Online requests use the hosted backend with your existing sign-in; account or connection errors leave the popup and device saves usable. If sign-in is needed, the sign-in link uses the current tab.
+Song Library opens in an on-page popup on GitHub Pages and on the hosted game. The new client talks directly to your Supabase project for authentication, song metadata, and original media files. It is currently awaiting project connection settings. Community lists show completed shared songs; account lists also expose unfinished uploads so the owner can clean up failed attempts.
 
-The [hosted song library](https://pulse-stage-derrick.utexas.chatgpt.site/?library=1) stores audio, charts, and optional backgrounds in a database-backed service. Sign in to save tracks privately, publish them to other authorized visitors, copy links, or delete your own uploads. Audio uploads are limited to 25 MB and background images to 40 MB (videos to 20 MB). Only publish music you created or have permission to share.
-
-**Access limitation:** this workspace currently blocks public Site publication. The GitHub Pages game is public, but the hosted library is restricted to accounts granted access. Anonymous public song sharing is not enabled.
+The setup creates a private media bucket and database ownership rules. Local tests exercise the client, not a real Supabase database; live authorization and file uploads must be checked in the project. See [the setup and validation guide](supabase/README.md). Existing records in the old Sites database are retained and have not been migrated. The original Worker API is retained for an explicit `provider: 'legacy'` configuration and its regression tests; it is not the selected frontend backend.
 
 ## Play locally
 
@@ -52,10 +54,12 @@ Open http://localhost:8000. Import audio or choose Play the demo, then Play Trac
 - Root HTML/CSS/JS files: the same game for GitHub Pages.
 - `worker/api.js`: authenticated save/share API with D1 records and R2 media.
 - `drizzle/`: database schema migration.
-- `scripts/build.mjs`: bundles browser assets and API into the hosted Worker.
+- `scripts/build.mjs`: validates public backend configuration and bundles browser assets plus the retained Worker API.
+- `supabase/`: new backend SQL, setup instructions, and required live validation.
+- `public/backend-config.js`: public project connection settings only; currently empty.
 - `tests/`: gameplay, scanning, hold controls, palette, and API permission checks.
 
-The shared library requires the hosted backend; a static local server provides local gameplay only.
+With a configured Supabase project, the library works from the static game as well. Without connection settings, local gameplay and device saves remain available.
 
 ## Checks
 

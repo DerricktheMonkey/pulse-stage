@@ -1,3 +1,4 @@
+import './validate-backend-config.mjs';
 import {readFile,mkdir,writeFile,readdir,rm} from 'node:fs/promises';
 const assets={};for(const name of await readdir('public')){assets['/'+name]=await readFile('public/'+name,'utf8');}
 const api=(await readFile('worker/api.js','utf8')).replace('export async function api','async function api');
