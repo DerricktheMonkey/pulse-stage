@@ -42,22 +42,8 @@ function updateHUD(){updateLife();const acc=state.judged?100*state.weight/state.
 function judge(note,result){if(note.result)return;note.result=result;state.judged++;state.counts[result]++;const weight={PERFECT:1,GREAT:.8,GOOD:.5,MISS:0}[result];state.weight+=weight;if(result==='MISS'){state.combo=0;}else{state.combo++;state.maxCombo=Math.max(state.maxCombo,state.combo);state.score+=Math.round(1000*weight);burst(note.lane);}state.health=E.nextHealth(state.health,result);state.feedbackUntil=performance.now()+450;$('feedback').textContent=result;$('feedback').style.color=result==='MISS'?'#ff859f':result==='GOOD'?'#fddc8f':state.palette[note.lane];updateHUD();if(state.health<=0&&!$('practice').checked)finish(false);}
 function press(lane){if(!state.playing||state.pressed[lane])return;state.pressed[lane]=true;state.flashes[lane]=performance.now();const t=songTime()-offset();if(state.holds[lane]&&!state.holds[lane].result)return;let candidate=null,delta=Infinity;for(const n of state.notes){if(n.time>t+E.HIT_WINDOW)break;if(n.lane===lane&&!n.result&&!n.started&&Math.abs(n.time-t)<delta){candidate=n;delta=Math.abs(n.time-t);}}if(candidate){let result=E.judgement(delta);if(result){if(candidate.duration>.05){candidate.started=true;candidate.startGrade=result;state.holds[lane]=candidate;burst(lane);state.feedbackUntil=performance.now()+250;$('feedback').textContent='HOLD';}else judge(candidate,result);}}}
 function release(lane){state.pressed[lane]=false;if(!state.playing)return;const n=state.holds[lane];if(n){const chartT=songTime()-offset();const remaining=n.time+n.duration-chartT;judge(n,remaining<=.16?n.startGrade:'MISS');state.holds[lane]=null;}}
-const audibleEnds=new WeakMap();
-function audibleEnd(buffer){
- if(audibleEnds.has(buffer))return audibleEnds.get(buffer);
- if(!buffer.numberOfChannels||!buffer.sampleRate||!buffer.getChannelData)return buffer.duration;
- // Ignore only near-silent trailing samples (below -80 dB); keep quiet outros and later reprises.
- let end=0;
- for(let channel=0;channel<buffer.numberOfChannels;channel++){
-  const data=buffer.getChannelData(channel);
-  for(let i=data.length-1;i>=Math.floor(end*buffer.sampleRate);i--)if(Math.abs(data[i])>.0001){end=(i+1)/buffer.sampleRate;break;}
- }
- audibleEnds.set(buffer,end);return end;
-}
 function canCompleteRun(){
- if(!state.buffer||!state.notes.length||state.judged!==state.notes.length||state.notes.some(n=>!n.result))return false;
- const t=songTime(),lastNoteEnd=state.notes.reduce((end,n)=>Math.max(end,n.time+(n.duration||0)+offset()),0);
- return t>=audibleEnd(state.buffer)&&t>=lastNoteEnd&&!state.holds.some(Boolean);
+ return !!state.buffer&&state.notes.length>0&&state.judged===state.notes.length&&state.notes.every(n=>!!n.result)&&!state.holds.some(n=>n&&!n.result);
 }
 function finish(complete=true,early=false){if(state.finished)return;if(complete&&early&&canCompleteRun())early=false;if($('pauseMenu').open)$('pauseMenu').close();state.finished=true;state.position=Math.min(state.buffer.duration,songTime());stopSource();state.playing=false;state.paused=false;clearInput();$('bgVideo').pause();document.body.classList.remove('running');$('pauseBtn').disabled=true;leaveFullscreen();updateLife();$('results').querySelector('.eyebrow').textContent=early?'TRACK ENDED EARLY':complete?'TRACK COMPLETE':'STAGE FAILED';const acc=state.judged?100*state.weight/state.judged:0;const rank=early?'—':E.rank(state.counts,state.notes.length,complete);$('resultTitle').textContent=early?'Results so far.':complete?(rank==='S'?'All Perfect!':state.counts.MISS===0?'Full combo!':'Nice flow.'):'Life depleted.';$('grade').textContent=rank;$('grade').classList.toggle('all-perfect',rank==='S');$('resultStats').replaceChildren();for(const [label,value] of Object.entries({Score:state.score,Accuracy:acc.toFixed(2)+'%','Max combo':state.maxCombo,...state.counts})){const row=document.createElement('div');row.className='stat-row';const l=document.createElement('span'),v=document.createElement('strong');l.textContent=label;v.textContent=value;row.append(l,v);$('resultStats').append(row);}if(complete&&!early&&(!state.best[bestKey()]||state.score>state.best[bestKey()].score)){state.best[bestKey()]={score:state.score,accuracy:acc,combo:state.maxCombo,rank};save('best',state.best);showBest();}$('results').showModal();}
 const canvas=$('game'),g=canvas.getContext('2d');let w=0,h=0;

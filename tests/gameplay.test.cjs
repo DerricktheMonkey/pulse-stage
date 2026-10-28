@@ -12,19 +12,18 @@ console.log('PASS: gameplay life loss, Practice exemption, hit animation trigger
 const dialog=()=>({open:false,close(){this.open=false;},showModal(){this.open=true;}}),pauseDialog=dialog(),results=dialog(),heading={};pauseDialog.open=true;results.querySelector=()=>heading;
 const finishEls={pauseMenu:pauseDialog,results,bgVideo:{pause(){}},pauseBtn:{},resultTitle:{},grade:{classList:{toggle(){}}},resultStats:{replaceChildren(){},append(){}}};let saves=0;
 const stopped={state:{finished:false,playing:false,paused:true,buffer:{duration:100},position:25,judged:2,weight:2,notes:[{},{},{}],counts:{PERFECT:2,GREAT:0,GOOD:0,MISS:0},score:2000,maxCombo:2,best:{},holds:[null,null,null,null]},$:id=>finishEls[id],songTime:()=>stopped.state.position,offset:()=>0,stopSource(){},clearInput(){},leaveFullscreen(){},updateLife(){},E,document:{body:{classList:{remove(){}}},createElement:()=>({append(){}})},save(){saves++;},bestKey:()=> 'track',showBest(){}};
-vm.createContext(stopped);vm.runInContext(app.slice(app.indexOf('const audibleEnds='),app.indexOf('const canvas=')),stopped);stopped.finish(true,true);
+vm.createContext(stopped);vm.runInContext(app.slice(app.indexOf('function canCompleteRun('),app.indexOf('const canvas=')),stopped);stopped.finish(true,true);
 assert(!pauseDialog.open);assert(results.open);assert(!stopped.state.paused);assert(!stopped.state.playing);assert.equal(stopped.state.position,25);assert.equal(heading.textContent,'TRACK ENDED EARLY');assert.equal(finishEls.grade.textContent,'—');assert.equal(finishEls.resultTitle.textContent,'Results so far.');assert.equal(saves,0);assert.equal(stopped.state.counts.MISS,0);
 assert(html.includes('id="endGame"'));assert(app.includes("$('endGame').onclick=()=>{if(state.paused)finish(true,true);}"));
 console.log('PASS: manual end closes pause menu, stops play, displays partial results, preserves judgements and does not save a partial best or award S.');
 
-// A fully judged chart after the last audible sample is a normal, score-eligible completion.
-const samples=new Float32Array(1000);samples[699]=.2;
-stopped.state.buffer={duration:100,numberOfChannels:1,sampleRate:10,getChannelData:()=>samples};
-stopped.state.notes=[{time:10,duration:0,result:'PERFECT'},{time:60,duration:5,result:'PERFECT'}];stopped.state.judged=2;stopped.state.position=71;
-assert(stopped.canCompleteRun());stopped.state.position=69;assert(!stopped.canCompleteRun(),'Music still playing');
-stopped.state.position=71;stopped.state.notes[1].result=null;assert(!stopped.canCompleteRun(),'Unjudged note');stopped.state.notes[1].result='PERFECT';stopped.state.notes[1].duration=15;assert(!stopped.canCompleteRun(),'Hold has not ended');stopped.state.notes[1].duration=5;
-stopped.state.holds[1]=stopped.state.notes[1];assert(!stopped.canCompleteRun(),'Active hold');stopped.state.holds[1]=null;
-const right=new Float32Array(1000);right[899]=.001;assert.equal(stopped.audibleEnd({duration:100,numberOfChannels:2,sampleRate:10,getChannelData:c=>c?right:samples}),90,'Quiet outro in either stereo channel counts');
-const reprise=new Float32Array(1000);reprise[200]=.3;reprise[950]=.1;assert.equal(stopped.audibleEnd({duration:100,numberOfChannels:1,sampleRate:10,getChannelData:()=>reprise}),95.1,'An internal silent gap does not end the song');
-stopped.state.finished=false;stopped.finish(true,true);assert.equal(heading.textContent,'TRACK COMPLETE');assert.equal(finishEls.grade.textContent,'S');assert.equal(finishEls.resultTitle.textContent,'All Perfect!');assert.equal(saves,1);assert.equal(stopped.state.best.track.rank,'S');
-console.log('PASS: Enter after music and all notes finish counts as a completed attempt, awards S when earned and saves bests; quiet outros, later audio, pending notes and holds remain protected.');
+// Completion depends on judgements, even when the final tap is hit early and music continues.
+stopped.state.buffer={duration:100};
+stopped.state.notes=[{time:10,duration:0,result:'PERFECT'},{time:60,duration:0,result:'PERFECT'}];stopped.state.judged=2;stopped.state.position=59.9;
+assert(stopped.canCompleteRun(),'Final tap hit within the early Perfect window qualifies immediately');
+stopped.state.notes[1].result=null;assert(!stopped.canCompleteRun(),'A pending final note or simultaneous chord member blocks completion');
+stopped.state.notes[1].duration=5;stopped.state.notes[1].started=true;stopped.state.holds[1]=stopped.state.notes[1];assert(!stopped.canCompleteRun(),'Hold still in progress');
+stopped.state.notes[1].result='PERFECT';stopped.state.holds[1]=null;assert(stopped.canCompleteRun(),'Judged hold tail qualifies');
+stopped.state.notes[1].duration=0;stopped.state.finished=false;stopped.finish(true,true);assert.equal(heading.textContent,'TRACK COMPLETE');assert.equal(finishEls.grade.textContent,'S');assert.equal(finishEls.resultTitle.textContent,'All Perfect!');assert.equal(saves,1);assert.equal(stopped.state.best.track.rank,'S');
+stopped.state.notes[0].result='MISS';assert(stopped.canCompleteRun(),'A fully judged attempt can include misses');stopped.state.judged=1;assert(!stopped.canCompleteRun(),'Incomplete judged total');
+console.log('PASS: Enter immediately after final tap or judged hold counts as complete while audio continues, awards earned S and saves bests; unjudged notes and active holds remain partial.');
