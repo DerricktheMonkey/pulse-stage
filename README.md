@@ -6,9 +6,9 @@
 
 A browser rhythm game with custom songs, automatic audio scanning, scene-matched backgrounds and tiles, hold notes, simultaneous chords, a life bar, and a chart editor.
 
-## Online uploads: setup pending
+## Online uploads: project configured
 
-The Supabase integration is prepared but **not connected to a project yet**. Gameplay and local saves work. Follow [the Supabase setup guide](supabase/README.md), run [setup.sql](supabase/setup.sql) in your new project, enable device/anonymous sign-ins, and supply the Project URL plus public publishable key in `public/backend-config.js` (and the root GitHub Pages copy). Do not put a secret/service-role key in the game.
+The supplied Supabase Project URL and public publishable key are configured. **SQL installation and anonymous sign-in still need confirmation in the project.** Gameplay and local saves work. Follow [the Supabase setup guide](supabase/README.md), run [setup.sql](supabase/setup.sql) in your new project, enable device/anonymous sign-ins, and verify the connection settings in `public/backend-config.js` (and the root GitHub Pages copy). Do not put a secret/service-role key in the game.
 
 ## How to play
 
@@ -34,7 +34,7 @@ Local saves require browser storage and are removed if you clear site data. Onli
 
 ## Online song library
 
-Song Library opens in an on-page popup on GitHub Pages and on the hosted game. The new client talks directly to your Supabase project for authentication, song metadata, and original media files. It is currently awaiting project connection settings. Community lists show completed shared songs; account lists also expose unfinished uploads so the owner can clean up failed attempts.
+Song Library opens in an on-page popup on GitHub Pages and on the hosted game. The new client talks directly to your Supabase project for authentication, song metadata, and original media files. Its connection settings are supplied; live database and authentication setup still need confirmation. Community lists show completed shared songs; account lists also expose unfinished uploads so the owner can clean up failed attempts.
 
 The setup creates a private media bucket and database ownership rules. Local tests exercise the client, not a real Supabase database; live authorization and file uploads must be checked in the project. See [the setup and validation guide](supabase/README.md). Existing records in the old Sites database are retained and have not been migrated. The original Worker API is retained for an explicit `provider: 'legacy'` configuration and its regression tests; it is not the selected frontend backend.
 
@@ -56,7 +56,7 @@ Open http://localhost:8000. Import audio or choose Play the demo, then Play Trac
 - `drizzle/`: database schema migration.
 - `scripts/build.mjs`: validates public backend configuration and bundles browser assets plus the retained Worker API.
 - `supabase/`: new backend SQL, setup instructions, and required live validation.
-- `public/backend-config.js`: public project connection settings only; currently empty.
+- `public/backend-config.js`: public project connection settings only; configured with the supplied URL and publishable key.
 - `tests/`: gameplay, scanning, hold controls, palette, and API permission checks.
 
 With a configured Supabase project, the library works from the static game as well. Without connection settings, local gameplay and device saves remain available.

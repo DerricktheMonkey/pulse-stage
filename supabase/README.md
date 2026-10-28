@@ -1,12 +1,12 @@
 # Connect Pulse Stage to your own Supabase backend
 
-The game integration is prepared. A Supabase project has **not** been created or connected yet. Gameplay and local saves work while this setup is pending. The old Sites database and its uploads are left in place; this setup does not migrate them.
+The supplied Supabase Project URL and public publishable key are now configured. The SQL installation and anonymous sign-in setting still need confirmation in your project. Gameplay and local saves remain available during setup. The old Sites database and its uploads are left in place; this setup does not migrate them.
 
 1. Open https://supabase.com/dashboard and create a **new project** in your own account. Keep its database password private. Choose the plan and region that suit you; no subscription or billing change is made by this repository.
 2. Open the project's **SQL Editor**, paste [setup.sql](setup.sql), and run it once. It creates the song table, private media bucket, validation functions, and ownership/read policies in one transaction. It is intended for a new project, not an existing database with these object names.
 3. In **Authentication → Sign In / Providers**, enable **Allow anonymous sign-ins**. This powers the game's **Continue on this device** button without a separate email service. These are real, authenticated Supabase users; ownership rules still apply. Configure provider rate limits and bot protection before promoting a public upload service. If you enable CAPTCHA, the game needs its CAPTCHA token integration before sign-in will work.
 4. From the project's **Connect** dialog (or **Settings → API Keys**), copy the **Project URL** and **publishable key**. Update `public/backend-config.js` and its root GitHub Pages copy `backend-config.js` with those two public values, leaving `provider: 'supabase'`. You can give these public values to ChatGPT to finish connecting the game. **Never provide a database password, `sb_secret_…`, or `service_role` key.**
-5. Rebuild/deploy the hosted version and commit the public files for GitHub Pages. Until real settings are supplied, the popup says the online library is being set up; it does not attempt the old cross-site sign-in.
+5. Rebuild/deploy the hosted version and commit the public files for GitHub Pages. The supplied public connection settings are already in the game. If SQL or authentication setup is incomplete, the library will report that service error; it does not attempt the old cross-site sign-in.
 
 ```js
 window.PulseBackendConfig = Object.freeze({

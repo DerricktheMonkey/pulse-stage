@@ -1,3 +1,2 @@
-// Public connection settings only. Never put a secret/service-role key here.
-// Fill these after running supabase/setup.sql in your own Supabase project.
-window.PulseBackendConfig=Object.freeze({provider:'supabase',url:'',publishableKey:'',allowDeviceSignIn:true,emailSignIn:false});
+// Public browser connection settings. No secret/service-role keys belong here.
+window.PulseBackendConfig=Object.freeze({provider:'supabase',url:'https://rnzhflcjjsamcpvydkyu.supabase.co',publishableKey:'sb_publishable_qHIdg2vbBo6PHlTp6SzWQg_vYuAIe-t',allowDeviceSignIn:true,emailSignIn:false});
