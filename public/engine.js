@@ -45,6 +45,30 @@ function spreadLanes(notes){
   const mapped={...note,lane};last[lane]=note.time+(note.duration||0);previous=mapped;recent.push(mapped);if(recent.length>8)recent.shift();return mapped;
  });
 }
+// Add accents at existing musical timestamps: two-note chords and brief jacks.
+function insanePatterns(notes,events=[]){
+ const out=notes.map(n=>({...n})),bursts=new Set();let lastBurst=-Infinity,lastBurstIndex=-24;
+ for(let i=8;i<out.length-3;i++){
+  const a=out[i+1].time-out[i].time,b=out[i+2].time-out[i+1].time;
+  if(out[i].time-lastBurst<4||i-lastBurstIndex<24||a<.1||a>.18||b<.1||b>.18||Math.abs(a-b)>.025)continue;
+  const forbidden=new Set([out[i-1].lane,out[i+3].lane]);
+  const lane=[out[i].lane,0,1,2,3].find(l=>!forbidden.has(l));
+  for(let j=i;j<i+3;j++){out[j].lane=lane;bursts.add(j);}
+  lastBurst=out[i+2].time;lastBurstIndex=i;i+=2;
+ }
+ const last=[-Infinity,-Infinity,-Infinity,-Infinity],extra=[];let lastChord=-Infinity,lastChordIndex=-8;
+ for(let i=0;i<out.length;i++){
+  const n=out[i];last[n.lane]=n.time+(n.duration||0);
+  if(i<2||i-lastChordIndex<8||n.time-lastChord<.9||n.duration||out[i-1]&&n.time-out[i-1].time<.085||out[i+1]&&out[i+1].time-n.time<.085)continue;
+  if([...bursts].some(j=>Math.abs(out[j].time-n.time)<.25))continue;
+  const local=events.slice(Math.max(0,i-4),i+5).map(e=>e.strength||0).sort((a,b)=>a-b);
+  if(local.length&&(events[i]?.strength||0)<local[Math.floor(local.length*.65)])continue;
+  const candidates=[0,1,2,3].filter(l=>l!==n.lane&&n.time-last[l]>=.16&&!out.slice(i+1,i+9).some(next=>next.lane===l&&next.time-n.time<.16));
+  candidates.sort((a,b)=>(Math.floor(a/2)===Math.floor(n.lane/2))-(Math.floor(b/2)===Math.floor(n.lane/2))||last[a]-last[b]);
+  if(candidates.length){const lane=candidates[0];extra.push({time:n.time,lane,duration:0});last[lane]=n.time;lastChord=n.time;lastChordIndex=i;}
+ }
+ return [...out,...extra].sort((a,b)=>a.time-b.time||a.lane-b.lane);
+}
 function analyze(samples,rate,difficulty='normal'){
  const insane=difficulty==='insane',hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
  const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[];let prev=new Float64Array(512);
@@ -102,11 +126,11 @@ function analyze(samples,rate,difficulty='normal'){
  const frequencies=selected.map(p=>p.frequency).filter(f=>f>0).sort((a,b)=>a-b),low=frequencies[Math.floor(frequencies.length*.1)]||130,high=frequencies[Math.floor(frequencies.length*.9)]||1000;
  const timed=insane?alignAttacks(samples,rate,selected):selected;
  let notes=timed.map(p=>({time:+p.time.toFixed(3),lane:p.frequency>0?Math.max(0,Math.min(3,Math.round(3*Math.log2(p.frequency/low)/Math.max(.5,Math.log2(high/low))))):1,duration:0}));
- if(insane)notes=spreadLanes(notes);
+ if(insane)notes=insanePatterns(spreadLanes(notes),timed);
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=selected[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i];let space=notes[i+1].time-n.time;if(i%7===3){if(difficulty==='normal'&&space<=.38&&notes[i+2]&&notes[i+2].time-n.time>.38){notes.splice(i+1,1);space=notes[i+1].time-n.time;}if(space>.38){n.duration=+Math.min(.75,space-.08).toFixed(3);}}}
  if(difficulty==='hard'){const extra=[];for(let i=0;i<notes.length;i++){const n=notes[i];if(i%4===1&&!n.duration)extra.push({time:n.time,lane:(n.lane+2)%4,duration:0});}notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
- return {notes,bpm,peaks,env,dt,scanVersion:7};
+ return {notes,bpm,peaks,env,dt,scanVersion:8};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
@@ -122,5 +146,5 @@ function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;s
 function rank(counts,total,complete=true){if(!complete)return 'RETRY';if(total>0&&counts.PERFECT===total&&!(counts.GREAT||counts.GOOD||counts.MISS))return 'S';const judged=(counts.PERFECT||0)+(counts.GREAT||0)+(counts.GOOD||0)+(counts.MISS||0),accuracy=judged?100*((counts.PERFECT||0)+.8*(counts.GREAT||0)+.5*(counts.GOOD||0))/judged:0;return accuracy>=90?'A':accuracy>=80?'B':accuracy>=65?'C':'D';}
 function holdCue(note,time){if(!note||note.duration<=.05||note.result)return null;const remaining=Math.max(0,note.time+note.duration-time);return {phase:remaining>0?'HOLD':'RELEASE',remaining,progress:Math.min(1,remaining/note.duration)};}
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

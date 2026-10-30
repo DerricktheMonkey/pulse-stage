@@ -31,7 +31,7 @@ const insane=E.analyze(fast,rate,'insane'),hard=E.analyze(fast,rate,'hard');
 assert(insane.notes.length>hard.notes.length*1.8);
 assert(attacks.every(t=>insane.notes.some(n=>Math.abs(n.time-t)<.035)),'Every fast melodic attack has a note within 35ms');
 assert(insane.notes.every(n=>attacks.some(t=>Math.abs(n.time-t)<.035)),'No fabricated notes between attacks or on releases');
-assert(insane.notes.every((n,i)=>!i||n.time-insane.notes[i-1].time>=.064),'Readable minimum spacing');
+assert(insane.notes.every((n,i)=>!i||n.time===insane.notes[i-1].time||n.time-insane.notes[i-1].time>=.064),'Readable minimum spacing');
 E.validateChart(insane,6);assert.equal(E.analyze(new Float32Array(rate*2),rate,'insane').notes.length,0);
 const steady=new Float32Array(rate*3);for(let i=rate/2|0;i<rate*2.5;i++)steady[i]=.4*Math.sin(2*Math.PI*440*i/rate);
 assert(E.analyze(steady,rate,'insane').notes.length<=2,'A sustained pitch is not turned into a random stream');
@@ -84,3 +84,21 @@ assert.equal(refined.length,attacks.length);
 const error=refined.reduce((sum,n,i)=>sum+Math.abs(n.time-attacks[i]),0)/refined.length;
 assert(error<.006,'Refine 15ms-early candidates to within 6ms mean error on known attacks');
 console.log('PASS: unchanged density/timestamps for lane spreading, balanced finger use, hand alternation, finger recovery and attack-time refinement.');
+
+// Difficulty accents stay bounded and reuse real attack times.
+for(const interval of [.065,.09,.125,.16,.25]){
+ const base=E.spreadLanes(Array.from({length:128},(_,i)=>({time:.5+i*interval,lane:i%4,duration:0}))),events=base.map(n=>({...n,strength:1})),pattern=E.insanePatterns(base,events),times=[...new Set(pattern.map(n=>n.time))];
+ assert.deepEqual(times,base.map(n=>n.time),'No attacks moved, dropped or invented');
+ assert(pattern.length<=base.length*1.16,'Chords add at most 16% extra presses');
+ const groups=times.map(time=>pattern.filter(n=>n.time===time));assert(groups.every(g=>g.length<=2),'No three/four-finger chords');
+ const chordTimes=groups.filter(g=>g.length===2).map(g=>g[0].time);
+ for(let i=1;i<chordTimes.length;i++)assert(chordTimes[i]-chordTimes[i-1]>=.9,'Chord recovery');
+ let run=1,maxRun=1,burstStarts=[];
+ for(let i=1;i<groups.length;i++){if(groups[i].length===1&&groups[i-1].length===1&&groups[i][0].lane===groups[i-1][0].lane&&times[i]-times[i-1]<.19){run++;if(run===2){burstStarts.push(times[i-1]);assert(times[i]-times[i-1]>=.1,'No finger-spam faster than 10 presses/sec');}}else run=1;maxRun=Math.max(maxRun,run);}
+ assert(maxRun<=3,'Same-finger bursts stop at three presses');
+ for(let i=1;i<burstStarts.length;i++)assert(burstStarts[i]-burstStarts[i-1]>=4,'Breathing room between bursts');
+ if(interval===.125){assert(chordTimes.length>0,'Include simultaneous accents');assert(burstStarts.length>0,'Include brief same-finger passages');}
+ if(interval===.065){assert.equal(burstStarts.length,0,'Never turn the fastest streams into single-finger spam');}
+ E.validateChart({notes:pattern},40);
+}
+console.log('PASS: occasional two-note chords, short three-note bursts, cooldowns, safe fastest streams and unchanged musical attack times.');
