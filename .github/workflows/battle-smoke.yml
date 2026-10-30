@@ -1,0 +1,28 @@
+name: Battle Mode checks
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/battle*.js'
+      - 'public/backend-config.js'
+      - 'public/app.js'
+      - 'tests/battle*'
+      - '.github/workflows/battle-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  battle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build and test
+        run: |
+          npm run build
+          npm test
+      - name: Two-client realtime smoke test
+        run: node tests/battle-live-smoke.mjs
