@@ -9,27 +9,44 @@ function spectrum(samples,start,size=1024){
 }
 function analyze(samples,rate,difficulty='normal'){
  const insane=difficulty==='insane',hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
- const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[];let prev=new Float64Array(512);
+ const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[];let prev=new Float64Array(512);
  for(let frame=0;frame<env.length;frame++){
   const mag=spectrum(samples,frame*hop-512);let rise=0,melodyRise=0,peak=0,bin=0;
   for(let k=6;k<Math.min(400,mag.length-1);k++){rise+=Math.max(0,mag[k]-prev[k]);if(k>=12&&k<=185&&mag[k]>=mag[k-1]&&mag[k]>mag[k+1]){const score=mag[k]*Math.pow(k,.3);if(score>peak){peak=score;bin=k;}}}
-  for(let k=16;k<=185;k++)melodyRise+=Math.max(0,mag[k]-prev[k]);
-  melodicFlux.push(melodyRise);spectralFlux.push(rise);pitch.push(bin*rate/1024);prev=mag;
+  let bandEnergy=0;for(let k=12;k<=185;k++){
+   bandEnergy+=mag[k];
+   // Tolerate small frequency drift: vibrato is not a new note attack.
+   melodyRise+=Math.max(0,mag[k]-Math.max(prev[k-1],prev[k],prev[k+1]));
+  }
+  let tonalEnergy=0;for(let k=Math.max(12,bin-1);k<=Math.min(185,bin+1);k++)tonalEnergy+=mag[k];
+  tonality.push(tonalEnergy/Math.max(.00001,bandEnergy));melodicEnergy.push(bandEnergy);
+  let frequency=bin*rate/1024;if(bin>0){const a=mag[bin-1],b=mag[bin],c=mag[bin+1],den=a-2*b+c;if(den)frequency=(bin+Math.max(-.5,Math.min(.5,.5*(a-c)/den)))*rate/1024;}
+  let tonalRise=0;for(let k=Math.max(12,bin-1);k<=Math.min(185,bin+1);k++)tonalRise+=Math.max(0,mag[k]-Math.max(prev[k-1],prev[k],prev[k+1]));
+  melodicFlux.push(insane?tonalRise:melodyRise);spectralFlux.push(rise);pitch.push(insane?frequency:bin*rate/1024);prev=mag;
  }
  const maxEnergy=Math.max(.00001,...energyFlux.slice(0,60000)),maxSpectral=Math.max(.00001,...spectralFlux.slice(0,60000));
  const flux=env.map((_,i)=>.55*energyFlux[i]/maxEnergy+.45*spectralFlux[i]/maxSpectral),raw=[];
  for(let i=2;i<flux.length-2;i++){let sum=0,count=0;for(let j=Math.max(0,i-12);j<=Math.min(flux.length-1,i+12);j++){sum+=flux[j];count++;}if(!(env[Math.min(env.length-1,i+2)]<env[Math.max(0,i-2)]*.65&&energyFlux[i]<maxEnergy*.08)&&env[i]>.002&&flux[i]>.025&&flux[i]>sum/count*1.55&&flux[i]>=flux[i-1]&&flux[i]>flux[i+1]){let snap=i;for(let j=Math.max(0,i-2);j<=Math.min(env.length-1,i+2);j++)if(energyFlux[j]>energyFlux[snap]&&energyFlux[j]>maxEnergy*.08)snap=j;raw.push({time:snap*dt,strength:flux[i],frequency:pitch[Math.min(pitch.length-1,snap+2)]});}}
- // Insane keeps real melodic attacks, including legato pitch changes that
- // don't produce a drum-like energy spike. Never fill a guessed beat grid.
+ // Insane charts only confirmed tonal attacks. Broad spectral changes and
+ // unstable pitch estimates in a full mix must not become extra notes.
  if(insane){
-  const maxMelody=Math.max(.00001,...melodicFlux.slice(0,120000));
-  for(let i=4;i<env.length-4;i++){
-   let baseline=0;for(let j=i-4;j<=i+4;j++)baseline+=melodicFlux[j]/9;
-   const attack=melodicFlux[i]>maxMelody*.035&&melodicFlux[i]>baseline*1.25&&melodicFlux[i]>=melodicFlux[i-1]&&melodicFlux[i]>melodicFlux[i+1];
-   const before=pitch[i-3],after=pitch[i+3];
-   const changed=before>0&&after>0&&Math.abs(Math.log2(after/before))>.07&&Math.abs(Math.log2(pitch[i+2]/after))<.04&&Math.abs(Math.log2(pitch[i+4]/after))<.04;
-   if(env[i]>.004&&env[i+3]>=env[i-3]*.8&&(attack||(changed&&melodicFlux[i]>maxMelody*.015&&melodicFlux[i]>=melodicFlux[i-1]&&melodicFlux[i]>melodicFlux[i+1]))){
-    raw.push({time:i*dt,strength:melodicFlux[i]/maxMelody,frequency:after});
+  raw.length=0;
+  const maxMelody=melodicFlux.reduce((a,b)=>Math.max(a,b),.00001);
+  const stable=(a,b)=>a>0&&b>0&&Math.abs(Math.log2(a/b))<.045;
+  for(let i=5;i<env.length-5;i++){
+   if(env[i+2]<.004||env[i+3]<env[i-3]*.8)continue;
+   let baseline=0;for(let j=i-5;j<=i+5;j++)baseline+=melodicFlux[j]/11;
+   const novelty=melodicFlux[i],after=pitch[i+4],before=pitch[i-3];
+   const tonal=tonality[i+3]>.18&&tonality[i+4]>.18;
+   const settled=stable(pitch[i+3],after)&&stable(pitch[i+5],after);
+   const changed=stable(pitch[i-4],before)&&stable(pitch[i-2],before)&&before>0&&after>0&&Math.abs(Math.log2(after/before))>.09;
+   const peak=novelty>=melodicFlux[i-1]&&novelty>melodicFlux[i+1];
+   const attack=novelty>maxMelody*.045&&novelty>baseline*1.8&&novelty/Math.max(.00001,melodicEnergy[i])>.06;
+   if(tonal&&settled&&peak&&(attack||(changed&&novelty>maxMelody*.025&&novelty>baseline*1.4))){
+    // Anchor to the audible attack, not to a guessed BPM subdivision.
+    let frame=i;
+    if(energyFlux[i]>maxEnergy*.08){for(let j=i-1;j<=i+1;j++)if(energyFlux[j]>energyFlux[frame])frame=j;}
+    raw.push({time:frame*dt,strength:novelty/maxMelody,frequency:after});
    }
   }
  }
@@ -42,7 +59,15 @@ function analyze(samples,rate,difficulty='normal'){
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=selected[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i];let space=notes[i+1].time-n.time;if(i%7===3){if(difficulty==='normal'&&space<=.38&&notes[i+2]&&notes[i+2].time-n.time>.38){notes.splice(i+1,1);space=notes[i+1].time-n.time;}if(space>.38){n.duration=+Math.min(.75,space-.08).toFixed(3);}}}
  if(difficulty==='hard'){const extra=[];for(let i=0;i<notes.length;i++){const n=notes[i];if(i%4===1&&!n.duration)extra.push({time:n.time,lane:(n.lane+2)%4,duration:0});}notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
- return {notes,bpm,peaks,env,dt,scanVersion:4};
+ return {notes,bpm,peaks,env,dt,scanVersion:5};
+}
+// Note heads occupy at most .082 of the lane height, plus a visible gap.
+// Speed changes travel distance only; chart timestamps never change.
+function scrollTravel(notes,requested=1.8,difficulty='normal'){
+ let travel=difficulty==='insane'?Math.min(requested,.8):requested;
+ const ends=[null,null,null,null];
+ for(const n of notes){const prev=ends[n.lane];if(prev){const gap=n.time-prev.time-(prev.duration||0);if(gap>0)travel=Math.min(travel,gap/(prev.duration>.05?.065:.1));}ends[n.lane]=n;}
+ return Math.max(.05,travel);
 }
 function nextHealth(health,result){return Math.max(0,Math.min(100,health+(result==='MISS'?-12:result==='PERFECT'?2:result==='GREAT'?1:0)));}
 function validateChart(data,duration){if(!data||!Array.isArray(data.notes)||data.notes.length>30000)throw Error('Choose a chart JSON containing a notes array (up to 30,000 notes).');const notes=data.notes.map(n=>{if(!Number.isFinite(n.time)||n.time<0||n.time>duration||!Number.isInteger(n.lane)||n.lane<0||n.lane>3||!Number.isFinite(n.duration??0)||(n.duration??0)<0||n.time+(n.duration??0)>duration+.01)throw Error('Notes need a valid time, lane 0–3, and duration within the song.');const out={time:n.time,lane:n.lane,duration:n.duration||0};return out;}).sort((a,b)=>a.time-b.time||a.lane-b.lane);const ends=[-1,-1,-1,-1];for(const n of notes){const lanes=[n.lane];if(lanes.some(l=>n.time<ends[l]-.001))throw Error('Notes cannot overlap in the same lane.');for(const l of lanes)ends[l]=n.time+Math.max(.035,n.duration);}return notes;}
@@ -50,5 +75,5 @@ function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;s
 function rank(counts,total,complete=true){if(!complete)return 'RETRY';if(total>0&&counts.PERFECT===total&&!(counts.GREAT||counts.GOOD||counts.MISS))return 'S';const judged=(counts.PERFECT||0)+(counts.GREAT||0)+(counts.GOOD||0)+(counts.MISS||0),accuracy=judged?100*((counts.PERFECT||0)+.8*(counts.GREAT||0)+.5*(counts.GOOD||0))/judged:0;return accuracy>=90?'A':accuracy>=80?'B':accuracy>=65?'C':'D';}
 function holdCue(note,time){if(!note||note.duration<=.05||note.result)return null;const remaining=Math.max(0,note.time+note.duration-time);return {phase:remaining>0?'HOLD':'RELEASE',remaining,progress:Math.min(1,remaining/note.duration)};}
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

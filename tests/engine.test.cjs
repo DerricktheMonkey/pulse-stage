@@ -43,3 +43,21 @@ const legatoChart=E.analyze(legato,rate,'insane');
 assert(legatoTimes.every(t=>legatoChart.notes.some(n=>Math.abs(n.time-t)<.035)),'Constant-volume legato pitch changes are mapped');
 assert(legatoChart.notes.every(n=>legatoTimes.some(t=>Math.abs(n.time-t)<.035)),'Legato contains no filler');
 E.validateChart(legatoChart,5);
+
+// A melody over independent hats and bass: do not turn hats into melody notes.
+const mixed=new Float32Array(rate*6),mixedTimes=Array.from({length:24},(_,i)=>.5+i*.2);let seed=7;
+for(let i=0;i<mixed.length;i++){const t=i/rate;seed=(Math.imul(seed,1664525)+1013904223)|0;const noise=seed/2147483648;if(t>=.5&&t<5.3){const n=Math.floor((t-.5)/.2),p=(t-.5)%.2,hz=[330,440,660,880,550,1100][n%6];mixed[i]=.45*Math.sin(2*Math.PI*hz*p)*Math.min(1,p*300,(.2-p)*300);}mixed[i]+=.07*Math.sin(2*Math.PI*80*t)+.1*noise*Math.exp(-(t%.125)*100);}
+const mixChart=E.analyze(mixed,rate,'insane');
+assert(mixedTimes.every(t=>mixChart.notes.some(n=>Math.abs(n.time-t)<.035)),'Every melodic attack survives accompaniment');
+assert(mixChart.notes.every(n=>mixedTimes.some(t=>Math.abs(n.time-t)<.035)),'Independent hi-hats do not add unrelated melody notes');
+const hiss=new Float32Array(rate*4),vibrato=new Float32Array(rate*4);let vibratoPhase=0;
+for(let i=0;i<hiss.length;i++){seed=(Math.imul(seed,1664525)+1013904223)|0;hiss[i]=seed/2147483648*.4;const t=i/rate;if(t>.5&&t<3.5){vibratoPhase+=2*Math.PI*440*Math.pow(2,.025*Math.sin(2*Math.PI*6*t))/rate;vibrato[i]=.4*Math.sin(vibratoPhase);}}
+assert.equal(E.analyze(hiss,rate,'insane').notes.length,0,'Broadband noise is not music');
+assert(E.analyze(vibrato,rate,'insane').notes.length<=2,'Vibrato is not a rapid melodic run');
+// Spacing is guaranteed by travel speed, without moving note timestamps.
+for(const notes of [insane.notes,legatoChart.notes,mixChart.notes,[{time:1,lane:0,duration:.5},{time:1.535,lane:0,duration:0},{time:1.57,lane:0,duration:0}]]){
+ const original=JSON.stringify(notes),travel=E.scrollTravel(notes,3,'insane'),ends=[null,null,null,null];
+ for(const n of notes){const prev=ends[n.lane];if(prev){const gap=n.time-prev.time-(prev.duration||0);assert(gap/travel>=(prev.duration>.05?.065:.1)-1e-9,'Note heads/tails stay visually separate in each lane');}ends[n.lane]=n;}
+ assert.equal(JSON.stringify(notes),original,'Changing scroll speed never changes rhythm');assert(travel<=.8);
+}
+console.log('PASS: melody over bass/hi-hats, noise/vibrato rejection, visual spacing for taps/holds, unchanged audio timestamps.');
