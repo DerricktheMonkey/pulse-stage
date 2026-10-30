@@ -1,5 +1,5 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm'),E=require('../public/engine.js');
-const app=fs.readFileSync('public/app.js','utf8'),els={practice:{checked:false},feedback:{style:{}}};let failed=false,bursts=0;
+const app=fs.readFileSync('public/app.js','utf8'),els={practice:{checked:false},feedback:{style:{}},perfectStatus:{dataset:{}},streakBreak:{classList:{add(){},remove(){}}}};let failed=false,bursts=0;
 const context={E,state:{judged:0,counts:{PERFECT:0,GREAT:0,GOOD:0,MISS:0},weight:0,combo:0,maxCombo:0,score:0,health:100,palette:['#fff']},$:id=>els[id],performance:{now:()=>0},burst:()=>bursts++,updateHUD:()=>{},finish:()=>failed=true};
 vm.createContext(context);vm.runInContext(app.slice(app.indexOf('function judge('),app.indexOf('function press(')),context);
 for(let i=0;i<9;i++)context.judge({lane:0},'MISS');assert(failed);assert.equal(context.state.health,0);
@@ -27,3 +27,16 @@ stopped.state.notes[1].result='PERFECT';stopped.state.holds[1]=null;assert(stopp
 stopped.state.notes[1].duration=0;stopped.state.finished=false;stopped.finish(true,true);assert.equal(heading.textContent,'TRACK COMPLETE');assert.equal(finishEls.grade.textContent,'S');assert.equal(finishEls.resultTitle.textContent,'All Perfect!');assert.equal(saves,1);assert.equal(stopped.state.best.track.rank,'S');
 stopped.state.notes[0].result='MISS';assert(stopped.canCompleteRun(),'A fully judged attempt can include misses');stopped.state.judged=1;assert(!stopped.canCompleteRun(),'Incomplete judged total');
 console.log('PASS: Enter immediately after final tap or judged hold counts as complete while audio continues, awards earned S and saves bests; unjudged notes and active holds remain partial.');
+
+// A non-perfect judgement ends AP even when the normal combo continues.
+context.state.perfectStreak=0;context.state.allPerfect=true;context.state.health=100;
+context.judge({lane:0},'PERFECT');context.judge({lane:0},'PERFECT');
+assert.equal(context.state.perfectStreak,2);const combo=context.state.combo;
+context.judge({lane:0},'GREAT');assert.equal(context.state.combo,combo+1);
+assert.equal(context.state.perfectStreak,0);assert.equal(context.state.allPerfect,false);
+assert.match(els.streakBreak.textContent,/ALL PERFECT LOST.*GREAT.*2 perfects/);
+const message=els.streakBreak.textContent;context.judge({lane:0},'PERFECT');
+assert.equal(els.streakBreak.textContent,message,'Rapid perfects cannot overwrite break banner');
+assert.match(els.perfectStatus.textContent,/AP LOST.*1 PERFECT STREAK/);
+context.judge({lane:0},'GOOD');assert.match(els.streakBreak.textContent,/PERFECT STREAK BROKEN.*GOOD/);
+console.log('PASS: AP loss on Great/Good/Miss, retained combo, persistent banner, new streak and duplicate-hit protection.');

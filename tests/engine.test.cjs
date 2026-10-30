@@ -23,3 +23,23 @@ let health=100;for(let i=0;i<9;i++)health=E.nextHealth(health,'MISS');assert.equ
 console.log('PASS: pitched song scanning, pitch-to-lane mapping, wider hit window and life depletion/recovery.');
 
 assert.equal(E.judgement(.115),'PERFECT');assert.equal(E.judgement(.13),'GREAT');assert.equal(E.judgement(.17),'GOOD');const legacy=E.validateChart({notes:[{time:1,lane:0,kind:'slide',endLane:1,duration:.4}]},5);assert.equal(legacy[0].duration,.4);assert(!('kind' in legacy[0]));assert(!('endLane' in legacy[0]));
+
+// Fast melodic run: keep every real 90ms attack without release/noise filler.
+const fast=new Float32Array(rate*6),attacks=[];
+for(let n=0;n<48;n++){const time=.5+n*.09;attacks.push(time);const hz=[330,440,660,880,550,1100][n%6];for(let i=0;i<rate*.085;i++)fast[Math.floor(time*rate)+i]+=Math.sin(2*Math.PI*hz*i/rate)*.5*Math.min(i/35,1,(rate*.085-i)/35);}
+const insane=E.analyze(fast,rate,'insane'),hard=E.analyze(fast,rate,'hard');
+assert(insane.notes.length>hard.notes.length*1.8);
+assert(attacks.every(t=>insane.notes.some(n=>Math.abs(n.time-t)<.035)),'Every fast melodic attack has a note within 35ms');
+assert(insane.notes.every(n=>attacks.some(t=>Math.abs(n.time-t)<.035)),'No fabricated notes between attacks or on releases');
+assert(insane.notes.every((n,i)=>!i||n.time-insane.notes[i-1].time>=.064),'Readable minimum spacing');
+E.validateChart(insane,6);assert.equal(E.analyze(new Float32Array(rate*2),rate,'insane').notes.length,0);
+const steady=new Float32Array(rate*3);for(let i=rate/2|0;i<rate*2.5;i++)steady[i]=.4*Math.sin(2*Math.PI*440*i/rate);
+assert(E.analyze(steady,rate,'insane').notes.length<=2,'A sustained pitch is not turned into a random stream');
+console.log('PASS: Insane melodic density, 35ms timing, spacing, no release filler, silence and sustained tones.');
+
+const legato=new Float32Array(rate*5),legatoTimes=Array.from({length:32},(_,i)=>.5+i*.125);let phase=0;
+for(let i=0;i<legato.length;i++){const t=i/rate;if(t<.5||t>=4.5)continue;const hz=[330,440,660,880,550,1100][Math.floor((t-.5)/.125)%6];phase+=2*Math.PI*hz/rate;legato[i]=.4*Math.sin(phase);}
+const legatoChart=E.analyze(legato,rate,'insane');
+assert(legatoTimes.every(t=>legatoChart.notes.some(n=>Math.abs(n.time-t)<.035)),'Constant-volume legato pitch changes are mapped');
+assert(legatoChart.notes.every(n=>legatoTimes.some(t=>Math.abs(n.time-t)<.035)),'Legato contains no filler');
+E.validateChart(legatoChart,5);

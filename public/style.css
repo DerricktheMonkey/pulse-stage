@@ -18,3 +18,10 @@
 #cloudAuthPanel{padding:16px;border:1px solid var(--line);border-radius:9px;margin-bottom:18px;background:#0c111b}#cloudAuthPanel h3{margin-top:0;font-size:16px}#cloudAuthPanel p{font-size:12px;color:var(--muted)}#cloudAuthPanel form{display:flex;gap:12px;align-items:end;margin-top:12px}#cloudAuthPanel label{font-size:11px;flex:1}#cloudAuthPanel input{display:block;width:100%;margin-top:6px;padding:11px;border:1px solid var(--line);border-radius:6px;background:#101522;color:white}#cloudAuthStatus{font-size:12px;line-height:1.6;margin-top:12px;color:var(--mint)}
 
 #compressionPanel{border:1px solid var(--mint);border-radius:8px;padding:14px;margin:12px 0;display:flex;flex-wrap:wrap;align-items:center;gap:12px}#compressionStatus{font-size:12px;line-height:1.6;flex:1}#compressionProgress{width:100%;height:8px;accent-color:var(--mint);order:3}#compressionPanel button{flex:none}
+
+/* Perfect streak feedback stays separate from rapid note judgements. */
+#perfectStatus{position:absolute;z-index:3;top:8px;left:50%;transform:translateX(-50%);padding:7px 12px;border:1px solid #ffe49c88;border-radius:20px;background:#141720e8;color:#ffe49c;font-size:10px;font-weight:800;letter-spacing:1px;white-space:nowrap;pointer-events:none}
+#perfectStatus[data-state="broken"]{color:#ffb0bf;border-color:#ff859f88}
+#streakBreak{position:absolute;z-index:4;top:25%;left:50%;width:max-content;max-width:92%;transform:translateX(-50%);padding:14px 18px;border:2px solid #ff859f;border-radius:9px;background:#2a101eee;color:#fff;font-size:14px;font-weight:900;text-align:center;box-shadow:0 0 26px #ff527d55;opacity:0;pointer-events:none}
+#streakBreak.visible{opacity:1}
+#difficulties [data-diff="insane"].selected{background:#572d51;color:#ffb4ee}
