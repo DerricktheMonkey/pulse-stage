@@ -41,3 +41,10 @@ context.judge({lane:0},'GOOD');assert.equal(els.streakBreak.textContent,'PERFECT
 const until=context.state.streakBreakUntil;context.judge({lane:0},'MISS');assert.equal(context.state.streakBreakUntil,until,'Consecutive non-perfects do not repeat the alert');
 assert(!html.includes('perfectStatus'));assert(!app.includes('perfectStreak:'));
 console.log('PASS: transient streak-break alerts on Great/Good/Miss, no streak counter, unchanged combo, no repeated non-perfect alerts.');
+
+for(const [difficulty,misses] of Object.entries({easy:13,normal:9,hard:5,insane:3})){
+ context.state.difficulty=difficulty;context.state.health=100;els.practice.checked=false;failed=false;
+ for(let i=0;i<misses-1;i++){context.judge({lane:0},'MISS');assert(!failed,difficulty+' failed too soon');}
+ context.judge({lane:0},'MISS');assert(failed,difficulty+' should fail at the configured miss total');
+}
+console.log('PASS: real judgement flow applies the selected difficulty life penalty.');

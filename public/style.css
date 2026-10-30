@@ -23,3 +23,7 @@
 #streakBreak{position:absolute;z-index:4;top:25%;left:50%;width:max-content;max-width:92%;transform:translateX(-50%);padding:14px 18px;border:2px solid #ff859f;border-radius:9px;background:#2a101eee;color:#fff;font-size:14px;font-weight:900;text-align:center;box-shadow:0 0 26px #ff527d55;opacity:0;pointer-events:none}
 #streakBreak.visible{opacity:1}
 #difficulties [data-diff="insane"].selected{background:#572d51;color:#ffb4ee}
+
+.life-rule{position:relative;z-index:2;text-align:center;font-size:9px;color:var(--muted);padding:4px 12px 8px;pointer-events:none}
+.song-card{flex-wrap:wrap}.song-card>div:first-child{flex:1;min-width:140px}.song-card strong{overflow-wrap:anywhere}.song-card.previewing{border-color:var(--mint)}
+.song-preview{flex:0 0 100%;border-top:1px solid var(--line);padding-top:12px}.song-preview[hidden]{display:none}.preview-frame{height:170px;border-radius:7px;overflow:hidden;display:grid;place-items:center;background:linear-gradient(135deg,#243a46,#22172e);color:var(--mint);font-size:12px}.preview-background{width:100%;height:100%;object-fit:cover}.preview-status{display:block;font-size:10px;color:var(--mint);padding-top:8px}.preview-toggle{white-space:nowrap}@media(max-width:680px){.preview-frame{height:140px}.song-preview{width:100%;flex-basis:auto}}
