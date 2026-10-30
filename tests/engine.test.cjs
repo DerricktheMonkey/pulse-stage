@@ -70,3 +70,17 @@ assert(chordTimes.filter(t=>chords.notes.some(n=>Math.abs(n.time-t)<.035)).lengt
 assert(chords.notes.every(n=>chordTimes.some(t=>Math.abs(n.time-t)<.035)),'Polyphonic density still comes from audible attacks');
 E.validateChart(chords,6);
 console.log('PASS: polyphonic musical attacks survive mixed-pitch filtering without invented timestamps.');
+
+// Lane redistribution preserves density and timing while avoiding finger jacks.
+for(const interval of [.065,.09,.125]){
+ const repeated=Array.from({length:128},(_,i)=>({time:1+i*interval,lane:0,duration:0})),mapped=E.spreadLanes(repeated),counts=[0,0,0,0],last=[-Infinity,-Infinity,-Infinity,-Infinity];
+ assert.equal(mapped.length,repeated.length);assert.deepEqual(mapped.map(n=>n.time),repeated.map(n=>n.time));
+ for(let i=0;i<mapped.length;i++){const n=mapped[i];counts[n.lane]++;assert(n.time-last[n.lane]>=.18,'Fast runs give a finger at least 180ms recovery');if(i)assert.notEqual(Math.floor(n.lane/2),Math.floor(mapped[i-1].lane/2),'Fast runs alternate hands');last[n.lane]=n.time;}
+ assert(Math.max(...counts)-Math.min(...counts)<=1,'Use all four fingers evenly');E.validateChart({notes:mapped},20);
+}
+// The new short-window alignment keeps the selected event count unchanged.
+const refined=E.alignAttacks(fast,rate,attacks.map((time,i)=>({time:time-.015,frequency:[330,440,660,880,550,1100][i%6],strength:1})));
+assert.equal(refined.length,attacks.length);
+const error=refined.reduce((sum,n,i)=>sum+Math.abs(n.time-attacks[i]),0)/refined.length;
+assert(error<.006,'Refine 15ms-early candidates to within 6ms mean error on known attacks');
+console.log('PASS: unchanged density/timestamps for lane spreading, balanced finger use, hand alternation, finger recovery and attack-time refinement.');

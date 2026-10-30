@@ -7,6 +7,44 @@ function spectrum(samples,start,size=1024){
  for(let len=2;len<=size;len<<=1){const angle=-2*Math.PI/len,wr=Math.cos(angle),wi=Math.sin(angle);for(let i=0;i<size;i+=len){let ur=1,ui=0;for(let j=0;j<len/2;j++){const a=i+j,b=a+len/2,vr=real[b]*ur-imag[b]*ui,vi=real[b]*ui+imag[b]*ur;real[b]=real[a]-vr;imag[b]=imag[a]-vi;real[a]+=vr;imag[a]+=vi;const next=ur*wr-ui*wi;ui=ur*wi+ui*wr;ur=next;}}}
  return real.slice(0,size/2).map((v,i)=>Math.hypot(v,imag[i])/size);
 }
+// Refine the existing events with short, pitch-focused windows. Selection is
+// already complete: this moves timestamps only, without changing chart density.
+function alignAttacks(samples,rate,events){
+ const size=256,step=32,weights=new Map();
+ return events.map((event,index)=>{
+  if(!(event.frequency>0))return {...event};
+  const midi=Math.round(69+12*Math.log2(event.frequency/440));
+  if(!weights.has(midi)){
+   const hz=440*Math.pow(2,(midi-69)/12),real=new Float64Array(size),imag=new Float64Array(size);
+   for(let k=0;k<size;k++){const window=.5-.5*Math.cos(2*Math.PI*k/(size-1)),phase=2*Math.PI*hz*k/rate;real[k]=window*Math.cos(phase);imag[k]=window*Math.sin(phase);}
+   weights.set(midi,{real,imag});
+  }
+  const {real,imag}=weights.get(midi),start=Math.max(0,Math.floor((event.time-.032)*rate)),end=Math.min(samples.length-1,Math.ceil((event.time+.04)*rate));
+  let previous=0,bestRise=0,bestSample=Math.round(event.time*rate),maxAmplitude=0;
+  for(let center=start-step;center<=end;center+=step){
+   let re=0,im=0;for(let k=0;k<size;k++){const sample=samples[center-(size>>1)+k]||0;re+=sample*real[k];im+=sample*imag[k];}
+   const amplitude=Math.hypot(re,im),rise=amplitude-previous;
+   if(center>=start&&rise>bestRise){bestRise=rise;bestSample=center-step/2;}
+   maxAmplitude=Math.max(maxAmplitude,amplitude);previous=amplitude;
+  }
+  const lower=index?(events[index-1].time+event.time)/2+.005:0,upper=index+1<events.length?(event.time+events[index+1].time)/2-.005:samples.length/rate;
+  const refined=bestRise>maxAmplitude*.025?bestSample/rate:event.time;
+  return {...event,time:Math.max(lower,Math.min(upper,refined))};
+ });
+}
+// Preserve pitches as a preference, but give each finger recovery time.
+function spreadLanes(notes){
+ const last=[-Infinity,-Infinity,-Infinity,-Infinity],recent=[];let previous=null;
+ return notes.map(note=>{
+  const preferred=note.lane;
+  const score=lane=>{
+   const recovery=note.time-last[lane],sameHand=previous&&Math.floor(lane/2)===Math.floor(previous.lane/2)&&note.time-previous.time<.22;
+   return (recovery<.18?100:0)+(previous?.lane===lane?20:0)+(sameHand?4:0)+recent.filter(n=>n.lane===lane).length*1.5+Math.max(0,.5-recovery)*8+Math.abs(lane-preferred)*.25;
+  };
+  let lane=preferred;for(let candidate=0;candidate<4;candidate++)if(score(candidate)<score(lane))lane=candidate;
+  const mapped={...note,lane};last[lane]=note.time+(note.duration||0);previous=mapped;recent.push(mapped);if(recent.length>8)recent.shift();return mapped;
+ });
+}
 function analyze(samples,rate,difficulty='normal'){
  const insane=difficulty==='insane',hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
  const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[];let prev=new Float64Array(512);
@@ -62,11 +100,13 @@ function analyze(samples,rate,difficulty='normal'){
  const gap={easy:.34,normal:.24,hard:.15,insane:.065}[difficulty]||.24,selected=[];
  for(const p of peaks){if(p.time<.35)continue;const previous=selected[selected.length-1];if(previous&&p.time-previous.time<gap){if(p.strength>previous.strength)selected[selected.length-1]=p;}else selected.push(p);}
  const frequencies=selected.map(p=>p.frequency).filter(f=>f>0).sort((a,b)=>a-b),low=frequencies[Math.floor(frequencies.length*.1)]||130,high=frequencies[Math.floor(frequencies.length*.9)]||1000;
- const notes=selected.map(p=>({time:+p.time.toFixed(3),lane:p.frequency>0?Math.max(0,Math.min(3,Math.round(3*Math.log2(p.frequency/low)/Math.max(.5,Math.log2(high/low))))):1,duration:0}));
+ const timed=insane?alignAttacks(samples,rate,selected):selected;
+ let notes=timed.map(p=>({time:+p.time.toFixed(3),lane:p.frequency>0?Math.max(0,Math.min(3,Math.round(3*Math.log2(p.frequency/low)/Math.max(.5,Math.log2(high/low))))):1,duration:0}));
+ if(insane)notes=spreadLanes(notes);
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=selected[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i];let space=notes[i+1].time-n.time;if(i%7===3){if(difficulty==='normal'&&space<=.38&&notes[i+2]&&notes[i+2].time-n.time>.38){notes.splice(i+1,1);space=notes[i+1].time-n.time;}if(space>.38){n.duration=+Math.min(.75,space-.08).toFixed(3);}}}
  if(difficulty==='hard'){const extra=[];for(let i=0;i<notes.length;i++){const n=notes[i];if(i%4===1&&!n.duration)extra.push({time:n.time,lane:(n.lane+2)%4,duration:0});}notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
- return {notes,bpm,peaks,env,dt,scanVersion:6};
+ return {notes,bpm,peaks,env,dt,scanVersion:7};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
@@ -82,5 +122,5 @@ function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;s
 function rank(counts,total,complete=true){if(!complete)return 'RETRY';if(total>0&&counts.PERFECT===total&&!(counts.GREAT||counts.GOOD||counts.MISS))return 'S';const judged=(counts.PERFECT||0)+(counts.GREAT||0)+(counts.GOOD||0)+(counts.MISS||0),accuracy=judged?100*((counts.PERFECT||0)+.8*(counts.GREAT||0)+.5*(counts.GOOD||0))/judged:0;return accuracy>=90?'A':accuracy>=80?'B':accuracy>=65?'C':'D';}
 function holdCue(note,time){if(!note||note.duration<=.05||note.result)return null;const remaining=Math.max(0,note.time+note.duration-time);return {phase:remaining>0?'HOLD':'RELEASE',remaining,progress:Math.min(1,remaining/note.duration)};}
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

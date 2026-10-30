@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const app=fs.readFileSync('public/app.js','utf8');
+const state={playing:true,origin:2,position:4},ctx={currentTime:10,getOutputTimestamp:()=>({contextTime:9.94,performanceTime:990})};
+const c={ctx,state,performance:{now:()=>1000}};vm.createContext(c);
+vm.runInContext(app.slice(app.indexOf('function audibleContextTime('),app.indexOf('function offset(')),c);
+assert(Math.abs(c.songTime()-7.95)<1e-9,'Use the audio presentation clock for notes and judgement');
+state.playing=false;assert.equal(c.songTime(),4,'Pause keeps its saved position');state.playing=true;
+ctx.getOutputTimestamp=()=>({contextTime:1,performanceTime:1});ctx.outputLatency=.04;
+assert(Math.abs(c.songTime()-7.96)<1e-9,'Stale output timestamps fall back to reported latency');
+ctx.getOutputTimestamp=()=>{throw Error('Unavailable');};assert(Math.abs(c.songTime()-7.96)<1e-9);
+ctx.outputLatency=0;ctx.baseLatency=.01;assert(Math.abs(c.songTime()-7.99)<1e-9);
+ctx.baseLatency=0;assert.equal(c.songTime(),8,'Browsers without latency reporting retain the normal clock');
+console.log('PASS: audio output timestamps, latency fallback, stale/throwing timestamps and pause position.');
