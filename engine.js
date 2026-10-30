@@ -27,28 +27,35 @@ function analyze(samples,rate,difficulty='normal'){
  const maxEnergy=Math.max(.00001,...energyFlux.slice(0,60000)),maxSpectral=Math.max(.00001,...spectralFlux.slice(0,60000));
  const flux=env.map((_,i)=>.55*energyFlux[i]/maxEnergy+.45*spectralFlux[i]/maxSpectral),raw=[];
  for(let i=2;i<flux.length-2;i++){let sum=0,count=0;for(let j=Math.max(0,i-12);j<=Math.min(flux.length-1,i+12);j++){sum+=flux[j];count++;}if(!(env[Math.min(env.length-1,i+2)]<env[Math.max(0,i-2)]*.65&&energyFlux[i]<maxEnergy*.08)&&env[i]>.002&&flux[i]>.025&&flux[i]>sum/count*1.55&&flux[i]>=flux[i-1]&&flux[i]>flux[i+1]){let snap=i;for(let j=Math.max(0,i-2);j<=Math.min(env.length-1,i+2);j++)if(energyFlux[j]>energyFlux[snap]&&energyFlux[j]>maxEnergy*.08)snap=j;raw.push({time:snap*dt,strength:flux[i],frequency:pitch[Math.min(pitch.length-1,snap+2)]});}}
- // Insane charts only confirmed tonal attacks. Broad spectral changes and
- // unstable pitch estimates in a full mix must not become extra notes.
+ // Follow audible attacks even when several instruments obscure the pitch.
+ // Only pitch-change-only events require a settled tone.
  if(insane){
-  raw.length=0;
+  const rhythmAttacks=raw.slice();raw.length=0;
   const maxMelody=melodicFlux.reduce((a,b)=>Math.max(a,b),.00001);
   const stable=(a,b)=>a>0&&b>0&&Math.abs(Math.log2(a/b))<.045;
   for(let i=5;i<env.length-5;i++){
    if(env[i+2]<.004||env[i+3]<env[i-3]*.8)continue;
    let baseline=0;for(let j=i-5;j<=i+5;j++)baseline+=melodicFlux[j]/11;
    const novelty=melodicFlux[i],after=pitch[i+4],before=pitch[i-3];
-   const tonal=tonality[i+3]>.18&&tonality[i+4]>.18;
+   const tonal=tonality[i+3]>.055&&tonality[i+4]>.055;
    const settled=stable(pitch[i+3],after)&&stable(pitch[i+5],after);
    const changed=stable(pitch[i-4],before)&&stable(pitch[i-2],before)&&before>0&&after>0&&Math.abs(Math.log2(after/before))>.09;
    const peak=novelty>=melodicFlux[i-1]&&novelty>melodicFlux[i+1];
-   const attack=novelty>maxMelody*.045&&novelty>baseline*1.8&&novelty/Math.max(.00001,melodicEnergy[i])>.06;
-   if(tonal&&settled&&peak&&(attack||(changed&&novelty>maxMelody*.025&&novelty>baseline*1.4))){
+   const attack=novelty>maxMelody*.012&&novelty>baseline*1.6&&novelty/Math.max(.00001,melodicEnergy[i])>.05;
+   if(tonal&&peak&&(attack||(settled&&changed&&novelty>maxMelody*.012&&novelty>baseline*1.4))){
     // Anchor to the audible attack, not to a guessed BPM subdivision.
     let frame=i;
     if(energyFlux[i]>maxEnergy*.08){for(let j=i-1;j<=i+1;j++)if(energyFlux[j]>energyFlux[frame])frame=j;}
     raw.push({time:frame*dt,strength:novelty/maxMelody,frequency:after});
    }
   }
+  // Strong volume attacks remain playable when chords mask any one pitch.
+  // This adds detected music events, never notes on an invented beat grid.
+  for(const p of rhythmAttacks){
+   const frame=Math.round(p.time/dt),rise=energyFlux[frame];
+   if(rise>Math.max(.003,env[Math.max(0,frame-1)]*.35)&&!raw.some(n=>Math.abs(n.time-p.time)<.065))raw.push(p);
+  }
+
  }
  raw.sort((a,b)=>a.time-b.time);const peaks=[];for(const p of raw){const previous=peaks[peaks.length-1];if(previous&&p.time-previous.time<(insane?.055:.075)){if(p.strength>previous.strength)peaks[peaks.length-1]=p;}else peaks.push(p);}
  let bpm=120,best=0;for(let b=75;b<=180;b++){let real=0,imag=0;for(const p of peaks){const phase=2*Math.PI*p.time*b/60;real+=p.strength*Math.cos(phase);imag+=p.strength*Math.sin(phase);}const score=real*real+imag*imag;if(score>best){best=score;bpm=b;}}
@@ -59,7 +66,7 @@ function analyze(samples,rate,difficulty='normal'){
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=selected[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i];let space=notes[i+1].time-n.time;if(i%7===3){if(difficulty==='normal'&&space<=.38&&notes[i+2]&&notes[i+2].time-n.time>.38){notes.splice(i+1,1);space=notes[i+1].time-n.time;}if(space>.38){n.duration=+Math.min(.75,space-.08).toFixed(3);}}}
  if(difficulty==='hard'){const extra=[];for(let i=0;i<notes.length;i++){const n=notes[i];if(i%4===1&&!n.duration)extra.push({time:n.time,lane:(n.lane+2)%4,duration:0});}notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
- return {notes,bpm,peaks,env,dt,scanVersion:5};
+ return {notes,bpm,peaks,env,dt,scanVersion:6};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.

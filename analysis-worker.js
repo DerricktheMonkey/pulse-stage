@@ -1,2 +1,2 @@
-importScripts('engine.js?v=30');
+importScripts('engine.js?v=31');
 onmessage=e=>{try{const {samples,rate,difficulty}=e.data;postMessage({analysis:RhythmEngine.analyze(samples,rate,difficulty)});}catch(error){postMessage({error:error.message});}};

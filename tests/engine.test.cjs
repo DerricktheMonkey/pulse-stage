@@ -61,3 +61,12 @@ for(const notes of [insane.notes,legatoChart.notes,mixChart.notes,[{time:1,lane:
  assert.equal(JSON.stringify(notes),original,'Changing scroll speed never changes rhythm');assert(travel<=.8);
 }
 console.log('PASS: melody over bass/hi-hats, noise/vibrato rejection, visual spacing for taps/holds, unchanged audio timestamps.');
+
+// Polyphonic chords used to fail the isolated-pitch stability/concentration gate.
+const polyphonic=new Float32Array(rate*6),chordTimes=Array.from({length:32},(_,i)=>.5+i*.125);
+for(let i=0;i<polyphonic.length;i++){const t=i/rate;if(t<.5||t>=4.5)continue;const n=Math.floor((t-.5)/.125),p=(t-.5)%.125,hz=[330,440,660,880,550,1100][n%6];for(const ratio of [1,1.25,1.5,2,2.5,3])polyphonic[i]+=.065*Math.sin(2*Math.PI*hz*ratio*p)*Math.min(1,p*300,(.125-p)*300);}
+const chords=E.analyze(polyphonic,rate,'insane');
+assert(chordTimes.filter(t=>chords.notes.some(n=>Math.abs(n.time-t)<.035)).length>=24,'Keep at least three quarters of polyphonic attacks instead of almost empty charts');
+assert(chords.notes.every(n=>chordTimes.some(t=>Math.abs(n.time-t)<.035)),'Polyphonic density still comes from audible attacks');
+E.validateChart(chords,6);
+console.log('PASS: polyphonic musical attacks survive mixed-pitch filtering without invented timestamps.');
