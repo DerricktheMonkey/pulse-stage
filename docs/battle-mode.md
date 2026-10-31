@@ -13,3 +13,7 @@ A knockout wins the round. If both players survive the song, higher weighted acc
 `public/battle-rules.js` owns deterministic voting/scoring. `public/battle-transport.js` implements the documented Supabase realtime protocol. `public/battle.js` coordinates the two browser clients, indexed judgement batches, clock samples, readiness, synchronized audio, round results, and the UI. The host coordinates a casual match; this is not a server-verified ranked or anti-cheat system.
 
 Automated tests cover rule outcomes, duplicate and delayed reports, hold completion, chord knockouts, the wire format, and two simulated browsers through all three rounds with matching results and a rejected third player. GitHub's Battle Mode checks also run an explicitly invoked two-client live realtime smoke test using the already-public browser settings; no users, permanent rooms or database records are created. Browser audio/fullscreen behavior and a full two-device playthrough remain manual checks.
+
+## Round difficulty
+
+The host can choose Original map, Easy, Normal, Hard or Insane while in the lobby, voting or loading. The setting applies to both players and carries into the next round. Original map keeps the uploaded notes; choosing a difficulty analyzes the same audio on both clients and uses that difficulty's miss damage. Changing it clears both Ready states and rebuilds both charts. Revision keys reject stale Ready messages; chart/audio hashes still have to agree. Difficulty is locked during countdown and play.

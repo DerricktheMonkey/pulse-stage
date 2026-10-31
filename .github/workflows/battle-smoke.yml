@@ -7,6 +7,10 @@ on:
       - 'public/backend-config.js'
       - 'public/app.js'
       - 'tests/battle*'
+      - 'public/leaderboard.js'
+      - 'public/engine.js'
+      - 'public/supabase-backend.js'
+      - 'tests/*leaderboard*'
       - '.github/workflows/battle-smoke.yml'
   workflow_dispatch:
 permissions:
