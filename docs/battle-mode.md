@@ -17,3 +17,5 @@ Automated tests cover rule outcomes, duplicate and delayed reports, hold complet
 ## Round difficulty
 
 The host can choose Original map, Easy, Normal, Hard or Insane while in the lobby, voting or loading. The setting applies to both players and carries into the next round. Original map keeps the uploaded notes; choosing a difficulty analyzes the same audio on both clients and uses that difficulty's miss damage. Changing it clears both Ready states and rebuilds both charts. Revision keys reject stale Ready messages; chart/audio hashes still have to agree. Difficulty is locked during countdown and play.
+
+Each player starts every round with 200 life (double the solo pool). Recovery caps at 200. Miss damage and recovery amounts are unchanged; both life bars scale to the 200-life maximum.
