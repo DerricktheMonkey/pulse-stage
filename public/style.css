@@ -34,3 +34,5 @@
 #difficulties{flex-wrap:wrap}#difficulties [data-diff="impossible"].selected{background:#622519;color:#ffd7a6}#difficulties [data-diff="impossible"]{color:#ffb66c}
 
 #performanceDetails,#battlePerformanceDetails{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}#performanceDetails pre,#battlePerformanceDetails pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;line-height:1.6;max-height:300px;overflow:auto}.stage-bottom{flex-wrap:wrap}#backgroundMotionBtn{font-size:11px}
+
+#videoCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}#bgVideo.video-canvas-source{left:-10000px;top:0;width:2px;height:2px;opacity:1!important}#videoRenderer{width:100%;padding:8px;background:#0c101a;color:#eef1ff;border:1px solid var(--line);border-radius:6px}
