@@ -8,12 +8,12 @@ function bitrate(limit,duration,factor=1){if(!Number.isFinite(duration)||duratio
 function eventOnce(el,name,signal,timeout=30000){return new Promise((resolve,reject)=>{let timer;const done=(error)=>{clearTimeout(timer);el.removeEventListener(name,ready);el.removeEventListener('error',bad);signal?.removeEventListener('abort',abort);error?reject(error):resolve();},ready=()=>done(),bad=()=>done(Error('The browser could not decode this background. Try an MP4, WebM, PNG, JPEG, or WebP.')),abort=()=>done(cancelled());el.addEventListener(name,ready,{once:true});el.addEventListener('error',bad,{once:true});signal?.addEventListener('abort',abort,{once:true});timer=setTimeout(()=>done(Error('Background decoding timed out.')),timeout);if(signal?.aborted)abort();});}
 // play() can resolve before a video has presented a useful sequence of frames.
 // Prime the decoder/compositor, with cancellation and a bounded fallback.
-function primeVideo(video,{signal,frames=8,timeout=1800}={}){
+function primeVideo(video,{signal,frames=8,seconds=.25,timeout=1800}={}){
  check(signal);return new Promise((resolve,reject)=>{
   let timer,callback=null,count=0,firstTime=null,done=false;
   const finish=(error,timedOut=false)=>{if(done)return;done=true;clearTimeout(timer);if(callback!==null)video.cancelVideoFrameCallback?.(callback);video.removeEventListener('ended',ended);video.removeEventListener('timeupdate',advance);signal?.removeEventListener('abort',abort);error?reject(error):resolve({frames:count,timedOut});};
-  const ended=()=>finish(),abort=()=>finish(cancelled()),advance=()=>{if(firstTime===null)firstTime=video.currentTime;if(video.currentTime-firstTime>=.25)finish();};
-  const frame=(now,metadata)=>{callback=null;if(done)return;count++;if(firstTime===null)firstTime=metadata.mediaTime;if(count>=frames||metadata.mediaTime-firstTime>=.25){finish();return;}callback=video.requestVideoFrameCallback(frame);};
+  const ended=()=>finish(),abort=()=>finish(cancelled()),advance=()=>{if(firstTime===null)firstTime=video.currentTime;if(video.currentTime-firstTime>=seconds)finish();};
+  const frame=(now,metadata)=>{callback=null;if(done)return;count++;if(firstTime===null)firstTime=metadata.mediaTime;if(count>=frames||metadata.mediaTime-firstTime>=seconds){finish();return;}callback=video.requestVideoFrameCallback(frame);};
   video.addEventListener('ended',ended,{once:true});signal?.addEventListener('abort',abort,{once:true});timer=setTimeout(()=>finish(null,true),timeout);
   if(video.requestVideoFrameCallback)callback=video.requestVideoFrameCallback(frame);else{firstTime=video.currentTime;video.addEventListener('timeupdate',advance);}
   try{Promise.resolve(video.play()).catch(finish);}catch(error){finish(error);}
