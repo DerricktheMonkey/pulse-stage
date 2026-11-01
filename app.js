@@ -124,7 +124,7 @@ function render(now){const monitor=typeof PulsePerformance!=='undefined'&&state.
   }
   if(state.playing&&t<0)$('countdown').textContent=Math.ceil(-t);else $('countdown').textContent='';
  }
- else if(!state.finished){[{time:.4,lane:0,duration:0},{time:.9,lane:2,duration:.4},{time:1.35,lane:1,duration:0},{time:1.65,lane:3,duration:0}].forEach(n=>drawNote(n,true));}
+ 
  drawHoldCues(now,active?chartT:0);drawHitEffects(now);if(now>state.feedbackUntil)$('feedback').textContent='';const progress=state.buffer?Math.max(0,Math.min(1,(active?t:state.position)/state.buffer.duration)):0;$('progressFill').style.width=progress*100+'%';$('elapsed').textContent=fmt(active?t:state.position);if(monitor)PulsePerformance.sample(now,t,performance.now()-drawStarted);requestAnimationFrame(render);}
 function laneFromEvent(e){const r=canvas.getBoundingClientRect(),relative=(e.clientX-r.left-r.width*.045)/(r.width*.91);return Math.max(0,Math.min(3,Math.floor(relative*4)));}
 canvas.addEventListener('pointerdown',e=>{e.preventDefault();canvas.setPointerCapture(e.pointerId);const lane=laneFromEvent(e);state.pointers.set(e.pointerId,lane);press(lane);});function pointerUp(e){const lane=state.pointers.get(e.pointerId);if(lane!==undefined){state.pointers.delete(e.pointerId);if(![...state.pointers.values()].includes(lane))release(lane);}}canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',pointerUp);canvas.addEventListener('lostpointercapture',pointerUp);
