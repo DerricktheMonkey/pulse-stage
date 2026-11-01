@@ -1,5 +1,7 @@
 (function(root){
 const HIT_WINDOW=.19;
+const ATTACK_BANDS=[[8,28],[28,74],[74,205],[205,400]];
+function attackLookup(events,gap){const buckets=new Map();const add=event=>{const key=Math.floor(event.time/gap);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(event.time);};for(const event of events)add(event);return {add,hasNear(time){const key=Math.floor(time/gap);for(let k=key-1;k<=key+1;k++)for(const prior of buckets.get(k)||[])if(Math.abs(prior-time)<gap)return true;return false;}};}
 function spectrum(samples,start,size=1024){
  const real=new Float64Array(size),imag=new Float64Array(size);
  for(let i=0;i<size;i++)real[i]=(samples[start+i]||0)*(.5-.5*Math.cos(2*Math.PI*i/(size-1)));
@@ -171,7 +173,7 @@ function analyze(samples,rate,difficulty='normal'){
   let frequency=bin*rate/1024;if(bin>0){const a=mag[bin-1],b=mag[bin],c=mag[bin+1],den=a-2*b+c;if(den)frequency=(bin+Math.max(-.5,Math.min(.5,.5*(a-c)/den)))*rate/1024;}
   let tonalRise=0;for(let k=Math.max(12,bin-1);k<=Math.min(185,bin+1);k++)tonalRise+=Math.max(0,mag[k]-Math.max(prev[k-1],prev[k],prev[k+1]));
   if(impossible)for(let band=0;band<4;band++){
-   const [lo,hi]=[[8,28],[28,74],[74,205],[205,400]][band];let energy=0,rise=0,peakBin=lo;
+   const [lo,hi]=ATTACK_BANDS[band];let energy=0,rise=0,peakBin=lo;
    for(let k=lo;k<hi;k++){energy+=mag[k];rise+=Math.max(0,mag[k]-Math.max(prev[k-1]||0,prev[k],prev[k+1]||0));if(mag[k]>mag[peakBin])peakBin=k;}
    const track=bands[band];track.flux.push(rise);track.energy.push(energy);track.pitch.push(peakBin*rate/1024);track.tonality.push((mag[peakBin-1]+mag[peakBin]+mag[peakBin+1])/Math.max(.00001,energy));
   }
@@ -204,13 +206,14 @@ function analyze(samples,rate,difficulty='normal'){
   }
   // Strong volume attacks remain playable when chords mask any one pitch.
   // This adds detected music events, never notes on an invented beat grid.
+  const attackGap=impossible?.045:.065,lookup=attackLookup(raw,attackGap);
   for(const p of rhythmAttacks){
    const frame=Math.round(p.time/dt),rise=energyFlux[frame];
-   if(rise>Math.max(.003,env[Math.max(0,frame-1)]*.35)&&!raw.some(n=>Math.abs(n.time-p.time)<(impossible?.045:.065)))raw.push(p);
+   if(rise>Math.max(.003,env[Math.max(0,frame-1)]*.35)&&!lookup.hasNear(p.time)){raw.push(p);lookup.add(p);}
   }
 
  }
- if(impossible){const busy=busiestAttacks(bands,dt);raw.push(...busy.filter(p=>!raw.some(n=>Math.abs(n.time-p.time)<.05)));}
+ if(impossible){const busy=busiestAttacks(bands,dt),lookup=attackLookup(raw,.05);for(const p of busy)if(!lookup.hasNear(p.time))raw.push(p);}
  raw.sort((a,b)=>a.time-b.time);const peaks=[];for(const p of raw){const previous=peaks[peaks.length-1];if(previous&&p.time-previous.time<(impossible?.032:insane?.055:.075)){if(p.strength>previous.strength)peaks[peaks.length-1]=p;}else peaks.push(p);}
  let bpm=120,best=0;for(let b=75;b<=180;b++){let real=0,imag=0;for(const p of peaks){const phase=2*Math.PI*p.time*b/60;real+=p.strength*Math.cos(phase);imag+=p.strength*Math.sin(phase);}const score=real*real+imag*imag;if(score>best){best=score;bpm=b;}}
  const gap={easy:.34,normal:.24,hard:.15,insane:.065,impossible:.04}[difficulty]||.24,selected=[];
@@ -240,19 +243,20 @@ function validateChart(data,duration){if(!data||!Array.isArray(data.notes)||data
 function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;start<notes.length;){let end=start+1;while(end<notes.length&&Math.abs(notes[end].time-notes[start].time)<=.001)end++;if(new Set(notes.slice(start,end).map(n=>n.lane)).size>1)for(let i=start;i<end;i++)notes[i].chord=true;start=end;}return notes;}
 function rank(counts,total,complete=true){if(!complete)return 'RETRY';if(total>0&&counts.PERFECT===total&&!(counts.GREAT||counts.GOOD||counts.MISS))return 'S';const judged=(counts.PERFECT||0)+(counts.GREAT||0)+(counts.GOOD||0)+(counts.MISS||0),accuracy=judged?100*((counts.PERFECT||0)+.8*(counts.GREAT||0)+.5*(counts.GOOD||0))/judged:0;return accuracy>=90?'A':accuracy>=80?'B':accuracy>=65?'C':'D';}
 function holdCue(note,time){if(!note||note.duration<=.05||note.result)return null;const remaining=Math.max(0,note.time+note.duration-time);return {phase:remaining>0?'HOLD':'RELEASE',remaining,progress:Math.min(1,remaining/note.duration)};}
-function nextPlayable(notes,lane,time){
- const pending=notes.filter(n=>!n.result&&!n.started);let best=null,bestDelta=Infinity;
- for(const candidate of pending){
+function noteIndex(notes,time){let lo=0,hi=notes.length;while(lo<hi){const mid=(lo+hi)>>>1;if(notes[mid].time<time)lo=mid+1;else hi=mid;}return lo;}
+function pendingIndex(notes,start=0){while(start<notes.length&&(notes[start].result||notes[start].started))start++;return start;}
+function nextPlayable(notes,lane,time,start=0){
+ let best=null,bestDelta=Infinity,before=start,previousTime=-Infinity;
+ for(let i=start;i<notes.length;i++){
+  const candidate=notes[i];if(candidate.time>time+HIT_WINDOW)break;if(candidate.result||candidate.started)continue;
   if(candidate.lane!==lane)continue;
   const delta=Math.abs(candidate.time-time);if(delta>HIT_WINDOW||delta>=bestDelta)continue;
-  // Recover at the next beat without waiting for an old note's late window.
-  // Earlier heads may be skipped only after their beat and when this press
-  // is a better timing match for the new head. Same-time chords stay unordered.
-  const blocked=pending.some(n=>n.time<candidate.time-.001&&(n.time>=time||time-n.time<=delta+1e-9));
-  if(!blocked){best=candidate;bestDelta=delta;}
+  while(before<i&&notes[before].time<candidate.time-.001){const earlier=notes[before++];if(!earlier.result&&!earlier.started)previousTime=earlier.time;}
+  if(previousTime>=time||time-previousTime<=delta+1e-9)continue;
+  best=candidate;bestDelta=delta;
  }
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);
