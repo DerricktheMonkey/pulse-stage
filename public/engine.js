@@ -227,21 +227,30 @@ function analyze(samples,rate,difficulty='normal'){
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i];let space=notes[i+1].time-n.time;if(i%7===3){if(difficulty==='normal'&&space<=.38&&notes[i+2]&&notes[i+2].time-n.time>.38){notes.splice(i+1,1);space=notes[i+1].time-n.time;}if(space>.38){n.duration=+Math.min(.75,space-.08).toFixed(3);}}}
  if(impossible)notes=impossiblePatterns(spreadLanes(notes),timed,bpm);
  if(difficulty==='hard'){const extra=[];for(let i=0;i<notes.length;i++){const n=notes[i];if(i%4===1&&!n.duration)extra.push({time:n.time,lane:(n.lane+2)%4,duration:0});}notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
- // Add independent taps during longer holds, using only lanes that are free.
- // Do not place taps inside any existing note/hold on the chosen lane.
+ // Add taps on free lanes during holds. Impossible frequently requires
+ // multiple independent hits throughout a hold, not just one midpoint tap.
  if(difficulty!=='easy'){
-  const extra=[];
-  const original=[...notes];
+  const extra=[],original=[...notes];
+  const all=()=>[...original,...extra];
+  const free=(lane,time)=>all().every(n=>{
+   if(n.lane!==lane)return true;
+   const end=n.time+Math.max(.035,n.duration||0);
+   return time>=end+.105||time+.105<=n.time;
+  });
   for(const hold of original){
-   if(!(hold.duration>=.42))continue;
-   const at=+(hold.time+hold.duration*.52).toFixed(3);
+   if(!(hold.duration>=(impossible?.30:.42)))continue;
+   const times=[];
+   if(impossible){
+    // Fit repeated taps inside the hold, leaving room at both ends.
+    for(let t=hold.time+.16;t<=hold.time+hold.duration-.12;t+=.17)times.push(+t.toFixed(3));
+    if(!times.length)times.push(+(hold.time+hold.duration*.5).toFixed(3));
+   }else times.push(+(hold.time+hold.duration*.52).toFixed(3));
    const lanes=[(hold.lane+2)%4,(hold.lane+1)%4,(hold.lane+3)%4];
-   const lane=lanes.find(l=>[...original,...extra].every(n=>{
-    if(n.lane!==l)return true;
-    const end=n.time+Math.max(.035,n.duration||0);
-    return at>=end+.13||at+.13<=n.time;
-   }));
-   if(lane!==undefined)extra.push({time:at,lane,duration:0});
+   for(let j=0;j<times.length;j++){
+    const at=times[j],choices=[...lanes.slice(j%3),...lanes.slice(0,j%3)];
+    const lane=choices.find(l=>free(l,at));
+    if(lane!==undefined)extra.push({time:at,lane,duration:0});
+   }
   }
   if(extra.length){notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
  }
