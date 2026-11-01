@@ -65,7 +65,7 @@ async function begin(){
  try{
   requestGameFullscreen();if($('results').open)$('results').close();setTab(false);await audio().resume();
   document.body.classList.add('running');$('countdown').textContent='';status('');await prepareLevelStart();
-  if(ticket!==state.startTicket){if(!state.starting)state.media?.pause?.();return;}resetRun();if(typeof Leaderboard!=='undefined')Leaderboard.beginRun();
+  if(ticket!==state.startTicket){if(!state.starting)state.media?.pause?.();return;}if(state.difficulty==='impossible')state.notes=E.enrichImpossibleHolds(state.notes);resetRun();if(typeof Leaderboard!=='undefined')Leaderboard.beginRun();
   state.position=-2;startSource(-2);$('stageMessage').hidden=true;$('pauseBtn').disabled=false;$('pauseBtn').textContent='Ⅱ Pause';$('restartBtn').disabled=false;$('playBtn').innerHTML='RESTART TRACK <span>↻</span>';status('D · F · J · K to play. Escape to pause.');$('game').scrollIntoView({block:'center',behavior:'instant'});
  }catch(error){if(ticket===state.startTicket){stopToStudio();status('Could not start this level: '+error.message);}}
  finally{if(ticket===state.startTicket){state.starting=false;$('playBtn').disabled=false;}}
