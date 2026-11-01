@@ -1,6 +1,6 @@
 # Opening performance diagnosis
 
-The cause of the user's device-specific first-second note hitch is not yet verified. Earlier optimizations and decoder changes did not resolve the reported symptom. Do not claim it is fixed based only on mocked tests.
+The user confirmed in a controlled comparison that freezing background motion removes the first-second note hitch. The exact decoding-versus-compositing bottleneck on their device remains unverified. Earlier optimizations and decoder changes did not resolve the reported symptom. Do not claim it is fixed based only on mocked tests.
 
 Build 47 adds a reversible Background motion checkbox and a Motion on/off button beside Pause. Turning motion off pauses the background video and prevents video seeks, warm-up playback and automatic playback requests. The background asset and original resolution are retained. Restart the same song after changing this setting for a clean comparison.
 
@@ -8,4 +8,6 @@ The pause menu and battle menu contain Performance report and Copy report contro
 
 A useful test is to play the first four seconds with motion on, then restart with motion off and copy the report after pausing. A hitch that crosses a phase boundary remains included; paused time is excluded. Toggling motion mid-run is marked so the report is not mistaken for a clean comparison.
 
-The user has said music remains smooth and suspects video/GIF backgrounds that required compression. Exact level, device data and this controlled comparison are still missing. Use those observations to choose the next fix rather than changing note generation, timing or difficulty again.
+The user has said music remains smooth and suspects video/GIF backgrounds that required compression. Exact level and device/frame-report data remain missing. The controlled Motion-off comparison now identifies moving backgrounds as the trigger. The user wants to retain the original video, rather than downscale it. Use those observations to choose the next fix rather than changing note generation, timing or difficulty again.
+
+Build 48 caches full-DPR note heads and hold-cap graphics before the count-in, replacing repeated live blur passes with image draws. The original video bytes, resolution, frame rate and playback path remain unchanged. This reduces competing render work but cannot guarantee smooth playback when decoding the original itself exceeds device capacity. Device validation is still required.
