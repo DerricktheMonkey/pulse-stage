@@ -71,11 +71,15 @@ async function begin(){
  finally{if(ticket===state.startTicket){state.starting=false;$('playBtn').disabled=false;}}
 }
 function playBackground(){const video=$('bgVideo');if($('backgroundMotion')?.checked===false)return;if(state.videoPlayPending||!video.src||!video.paused||performance.now()<(state.videoRetryAt||0))return;state.videoPlayPending=true;try{Promise.resolve(video.play()).catch(()=>{state.videoRetryAt=performance.now()+1000;}).finally(()=>{state.videoPlayPending=false;});}catch{state.videoPlayPending=false;state.videoRetryAt=performance.now()+1000;}}
-function syncVideo(t){const video=$('bgVideo');if($('backgroundMotion')?.checked===false){video.pause();return;}if(!video.src||video.readyState<1)return;
- // Backgrounds are decorative loops: let them run through the count-in, with
- // their own offset, so no play/seek transition lands on the first notes.
+function syncVideo(t){
+ const video=$('bgVideo');
+ if($('backgroundMotion')?.checked===false){video.pause();return;}
+ if(!video.src||video.readyState<1)return;
+ // Decorative background: avoid frequent seeks that force expensive decoding.
+ // Let the video run during count-in and gameplay; audio stays the note clock.
  if(t<0){state.videoTimelineOffset=video.currentTime-t;playBackground();return;}
- try{const position=Math.max(0,t+(state.videoTimelineOffset||0)),target=Number.isFinite(video.duration)&&video.duration?position%video.duration:position;if(Math.abs(video.currentTime-target)>.04)video.currentTime=target;}catch{}if(state.playing)playBackground();}
+ if(state.playing)playBackground();
+}
 function startSource(position){if(position<0&&typeof PulsePerformance!=='undefined')PulsePerformance.begin({build:53,level:state.name,difficulty:state.difficulty,motion:$('backgroundMotion')?.checked!==false,background:state.backgroundFile?.type||state.media?.tagName||'none',canvas:$('game').width+'×'+$('game').height,browser:navigator.userAgent});stopSource();const ac=audio();state.origin=ac.currentTime-position;state.presentationClock={time:audibleContextTime(),wall:performance.now()};const source=ac.createBufferSource();source.buffer=state.buffer;source.connect(gain);state.source=source;source.start(ac.currentTime+Math.max(0,-position),Math.max(0,position));state.playing=true;state.paused=false;state.resumedAt=ac.currentTime;syncVideo(position);updateLife();}
 function pause(){if(typeof BattleMode!=='undefined'&&BattleMode.isRunning()){BattleMode.pause();return;}if(state.playing){state.position=songTime();if(typeof PulsePerformance!=='undefined')PulsePerformance.pause();stopSource();state.playing=false;state.paused=true;state.pressed.fill(false);state.pointers.clear();$('bgVideo').pause();$('pauseBtn').textContent='▶ Resume';$('pauseMenu').showModal();if(typeof refreshPerformanceReport==='function')refreshPerformanceReport();}else if(state.paused){requestGameFullscreen();audio().resume().then(()=>{if($('pauseMenu').open)$('pauseMenu').close();startSource(state.position);$('pauseBtn').textContent='Ⅱ Pause';$('stageMessage').hidden=true;});}}
 function returnToMenu(){if(typeof BattleMode!=='undefined'&&BattleMode.active()){BattleMode.leave();return;}if($('pauseMenu').open)$('pauseMenu').close();stopToStudio();document.querySelector('main').scrollIntoView({block:'start'});status('Back in the studio. Your track and chart are ready.');}
