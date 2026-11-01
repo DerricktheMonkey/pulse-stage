@@ -69,8 +69,47 @@ function insanePatterns(notes,events=[]){
  }
  return [...out,...extra].sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
-// Revoice confirmed musical attacks into bounded expert patterns. Never add a
-// timestamp between attacks: triplets/trills must already exist in the audio.
+// Track independent frequency bands so a quiet, fast part is not hidden by a
+// loud, slow instrument. Change the preferred band as the arrangement changes.
+function busiestAttacks(bands,dt){
+ const tracks=bands.map(band=>{
+  const found=[],max=band.flux.reduce((a,b)=>Math.max(a,b),.00001);
+  for(let i=3;i<band.flux.length-3;i++){
+   const rise=band.flux[i];if(rise<max*.008||rise<band.energy[i]*.055||rise<band.flux[i-1]||rise<=band.flux[i+1])continue;
+   let average=0;for(let j=i-3;j<=i+3;j++)average+=band.flux[j]/7;
+   if(rise<average*1.45||Math.min(band.tonality[i+1],band.tonality[i+2])<.42||band.energy[i+2]<band.energy[i-2]*.65)continue;
+   const event={time:i*dt,frequency:band.pitch[i+2],strength:rise/max,source:'busy'};
+   if(!found.length||event.time-found.at(-1).time>=.04)found.push(event);
+  }
+  return found;
+ });
+ const windows=new Map();for(let band=0;band<tracks.length;band++)for(const event of tracks[band]){
+  const key=Math.floor(event.time/.8);for(let window=key-1;window<=key+1;window++){if(!windows.has(window))windows.set(window,[0,0,0,0]);windows.get(window)[band]++;}
+ }
+ return tracks.flatMap((track,band)=>track.filter(event=>{const counts=windows.get(Math.floor(event.time/.8));return counts[band]===Math.max(...counts);}));
+}
+// Slow sections still get demanding rhythm: alternating triplet eighths and
+// straight sixteenths, anchored to detected beats and only while audio sounds.
+function slowRhythm(events,bpm,env,dt){
+ const beat=60/bpm,extra=[];let supported=0,total=0,phrase=0;
+ for(let i=0;i<events.length-1;i++){const gap=events[i+1].time-events[i].time;if(gap<beat*.8||gap>beat*4.1)continue;total++;if(Math.abs(gap/beat-Math.round(gap/beat))<.09)supported++;}
+ if(supported<3||supported<total*.65)return events;
+ for(let i=0;i<events.length-1;i++){
+  const a=events[i],gap=events[i+1].time-a.time,beats=Math.round(gap/beat);
+  if(gap<.36||beats<1||beats>4||Math.abs(gap/beat-beats)>.09)continue;
+  const section=phrase++%4;if(section===3)continue; // leave a phrase for holds
+  const parts=section===2?4:3,step=beat/parts;if(step<.075)continue;
+  for(let j=1;j<beats*parts;j++){
+   const time=a.time+j*step;if(events[i+1].time-time<.07)continue;
+   const frame=Math.round(time/dt),energy=env[frame]||0;
+   if(energy<.004||energy<(env[Math.round(a.time/dt)+2]||0)*.04)continue;
+   extra.push({...a,time,strength:a.strength*.6,subdivision:parts===3?'triplet':'sixteenth'});
+  }
+ }
+ return [...events,...extra].sort((a,b)=>a.time-b.time);
+}
+// Revoice attacks and beat subdivisions into bounded expert patterns.
+// Rhythmic triplets are successive notes; triple chords are separate accents.
 function impossiblePatterns(notes,events=[],bpm=120){
  const out=notes.map(n=>({...n})),reserved=new Set();let lastTrill=-Infinity,lastJack=-Infinity,lastTriplet=-Infinity;
  function assign(indices,lanes){
@@ -102,7 +141,7 @@ function impossiblePatterns(notes,events=[],bpm=120){
    if([0,1,2,3].some(lane=>assign([i,i+1,i+2],[lane,lane,lane]))){lastJack=out[i+2].time;i+=2;}
   }
  }
- const last=[-Infinity,-Infinity,-Infinity,-Infinity],extra=[];let chordAt=-Infinity,chordIndex=-4,chords=0;
+ const last=[-Infinity,-Infinity,-Infinity,-Infinity],extra=[];let chordAt=-Infinity,chordIndex=-4,chords=0,tripleAt=-Infinity;
  for(let i=0;i<out.length;i++){
   const n=out[i];last[n.lane]=n.time+(n.duration||0);
   if(i<2||n.duration||reserved.has(i)||i-chordIndex<4||n.time-chordAt<.4||out[i-1]&&n.time-out[i-1].time<.075||out[i+1]&&out[i+1].time-n.time<.075)continue;
@@ -110,15 +149,15 @@ function impossiblePatterns(notes,events=[],bpm=120){
   if(local.length&&(events[i]?.strength||0)<local[Math.floor(local.length*.5)])continue;
   const candidates=[0,1,2,3].filter(l=>l!==n.lane&&n.time-last[l]>=.14&&!out.slice(i+1,i+9).some(next=>next.lane===l&&next.time-n.time<.14));
   candidates.sort((a,b)=>(Math.floor(a/2)===Math.floor(n.lane/2))-(Math.floor(b/2)===Math.floor(n.lane/2))||last[a]-last[b]);
-  const count=chords%4===3?2:1;let added=0;
+  const count=chords%12===11&&n.time-tripleAt>=12?2:1;let added=0;
   for(const lane of candidates.slice(0,count)){extra.push({time:n.time,lane,duration:0});last[lane]=n.time;added++;}
-  if(added){chords++;chordAt=n.time;chordIndex=i;}
+  if(added){if(added===2)tripleAt=n.time;chords++;chordAt=n.time;chordIndex=i;}
  }
  return [...out,...extra].sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
 function analyze(samples,rate,difficulty='normal'){
  const impossible=difficulty==='impossible',insane=difficulty==='insane'||impossible,hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
- const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[];let prev=new Float64Array(512);
+ const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[],bands=impossible?Array.from({length:4},()=>({flux:[],energy:[],pitch:[],tonality:[]})):[];let prev=new Float64Array(512);
  for(let frame=0;frame<env.length;frame++){
   const mag=spectrum(samples,frame*hop-512);let rise=0,melodyRise=0,peak=0,bin=0;
   for(let k=6;k<Math.min(400,mag.length-1);k++){rise+=Math.max(0,mag[k]-prev[k]);if(k>=12&&k<=185&&mag[k]>=mag[k-1]&&mag[k]>mag[k+1]){const score=mag[k]*Math.pow(k,.3);if(score>peak){peak=score;bin=k;}}}
@@ -131,6 +170,11 @@ function analyze(samples,rate,difficulty='normal'){
   tonality.push(tonalEnergy/Math.max(.00001,bandEnergy));melodicEnergy.push(bandEnergy);
   let frequency=bin*rate/1024;if(bin>0){const a=mag[bin-1],b=mag[bin],c=mag[bin+1],den=a-2*b+c;if(den)frequency=(bin+Math.max(-.5,Math.min(.5,.5*(a-c)/den)))*rate/1024;}
   let tonalRise=0;for(let k=Math.max(12,bin-1);k<=Math.min(185,bin+1);k++)tonalRise+=Math.max(0,mag[k]-Math.max(prev[k-1],prev[k],prev[k+1]));
+  if(impossible)for(let band=0;band<4;band++){
+   const [lo,hi]=[[8,28],[28,74],[74,205],[205,400]][band];let energy=0,rise=0,peakBin=lo;
+   for(let k=lo;k<hi;k++){energy+=mag[k];rise+=Math.max(0,mag[k]-Math.max(prev[k-1]||0,prev[k],prev[k+1]||0));if(mag[k]>mag[peakBin])peakBin=k;}
+   const track=bands[band];track.flux.push(rise);track.energy.push(energy);track.pitch.push(peakBin*rate/1024);track.tonality.push((mag[peakBin-1]+mag[peakBin]+mag[peakBin+1])/Math.max(.00001,energy));
+  }
   melodicFlux.push(insane?tonalRise:melodyRise);spectralFlux.push(rise);pitch.push(insane?frequency:bin*rate/1024);prev=mag;
  }
  const maxEnergy=Math.max(.00001,...energyFlux.slice(0,60000)),maxSpectral=Math.max(.00001,...spectralFlux.slice(0,60000));
@@ -166,19 +210,21 @@ function analyze(samples,rate,difficulty='normal'){
   }
 
  }
- raw.sort((a,b)=>a.time-b.time);const peaks=[];for(const p of raw){const previous=peaks[peaks.length-1];if(previous&&p.time-previous.time<(impossible?.04:insane?.055:.075)){if(p.strength>previous.strength)peaks[peaks.length-1]=p;}else peaks.push(p);}
+ if(impossible){const busy=busiestAttacks(bands,dt);raw.push(...busy.filter(p=>!raw.some(n=>Math.abs(n.time-p.time)<.05)));}
+ raw.sort((a,b)=>a.time-b.time);const peaks=[];for(const p of raw){const previous=peaks[peaks.length-1];if(previous&&p.time-previous.time<(impossible?.032:insane?.055:.075)){if(p.strength>previous.strength)peaks[peaks.length-1]=p;}else peaks.push(p);}
  let bpm=120,best=0;for(let b=75;b<=180;b++){let real=0,imag=0;for(const p of peaks){const phase=2*Math.PI*p.time*b/60;real+=p.strength*Math.cos(phase);imag+=p.strength*Math.sin(phase);}const score=real*real+imag*imag;if(score>best){best=score;bpm=b;}}
- const gap={easy:.34,normal:.24,hard:.15,insane:.065,impossible:.045}[difficulty]||.24,selected=[];
+ const gap={easy:.34,normal:.24,hard:.15,insane:.065,impossible:.04}[difficulty]||.24,selected=[];
  for(const p of peaks){if(p.time<.35)continue;const previous=selected[selected.length-1];if(previous&&p.time-previous.time<gap){if(p.strength>previous.strength)selected[selected.length-1]=p;}else selected.push(p);}
  const frequencies=selected.map(p=>p.frequency).filter(f=>f>0).sort((a,b)=>a-b),low=frequencies[Math.floor(frequencies.length*.1)]||130,high=frequencies[Math.floor(frequencies.length*.9)]||1000;
- const timed=insane?alignAttacks(samples,rate,selected):selected;
+ const aligned=insane?alignAttacks(samples,rate,selected):selected;
+ const timed=impossible?slowRhythm(aligned,bpm,env,dt):aligned;
  let notes=timed.map(p=>({time:+p.time.toFixed(3),lane:p.frequency>0?Math.max(0,Math.min(3,Math.round(3*Math.log2(p.frequency/low)/Math.max(.5,Math.log2(high/low))))):1,duration:0}));
  if(insane&&!impossible)notes=insanePatterns(spreadLanes(notes),timed);
- if(difficulty!=='easy'&&(!insane||impossible))for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=selected[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
+ if(difficulty!=='easy'&&(!insane||impossible))for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=timed[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i];let space=notes[i+1].time-n.time;if(i%7===3){if(difficulty==='normal'&&space<=.38&&notes[i+2]&&notes[i+2].time-n.time>.38){notes.splice(i+1,1);space=notes[i+1].time-n.time;}if(space>.38){n.duration=+Math.min(.75,space-.08).toFixed(3);}}}
  if(impossible)notes=impossiblePatterns(spreadLanes(notes),timed,bpm);
  if(difficulty==='hard'){const extra=[];for(let i=0;i<notes.length;i++){const n=notes[i];if(i%4===1&&!n.duration)extra.push({time:n.time,lane:(n.lane+2)%4,duration:0});}notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
- return {notes,bpm,peaks,env,dt,scanVersion:9};
+ return {notes,bpm,peaks,env,dt,scanVersion:10,rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
@@ -208,5 +254,5 @@ function nextPlayable(notes,lane,time){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={nextPlayable,missDamage,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);
