@@ -35,5 +35,3 @@
 
 #performanceDetails,#battlePerformanceDetails{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}#performanceDetails pre,#battlePerformanceDetails pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;line-height:1.6;max-height:300px;overflow:auto}.stage-bottom{flex-wrap:wrap}#backgroundMotionBtn{font-size:11px}
 
-/* Keep the playfield hidden while the stage title overlay is visible. */
-.canvas-wrap:has(#stageMessage:not([hidden])) #game{visibility:hidden}
