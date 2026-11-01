@@ -251,7 +251,7 @@ function nextPlayable(notes,lane,time,start=0){
   const candidate=notes[i];if(candidate.time>time+HIT_WINDOW)break;if(candidate.result||candidate.started)continue;
   if(candidate.lane!==lane)continue;
   const delta=Math.abs(candidate.time-time);if(delta>HIT_WINDOW||delta>=bestDelta)continue;
-  while(before<i&&notes[before].time<candidate.time-.001){const earlier=notes[before++];if(!earlier.result&&!earlier.started)previousTime=earlier.time;}
+  while(before<i&&notes[before].time<candidate.time-.001){const earlier=notes[before++];if(earlier.lane===lane&&!earlier.result&&!earlier.started)previousTime=earlier.time;}
   if(previousTime>=time||time-previousTime<=delta+1e-9)continue;
   best=candidate;bestDelta=delta;
  }
