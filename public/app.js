@@ -120,7 +120,8 @@ function render(now){const monitor=typeof PulsePerformance!=='undefined'&&state.
    state.noteCursor=E.pendingIndex(state.notes,state.noteCursor||0);
    if(state.playing)for(let i=state.noteCursor;i<state.notes.length;i++){const n=state.notes[i];if(n.time>chartT+.2)break;if(!n.result&&!n.started&&chartT>n.time+E.HIT_WINDOW)judge(n,'MISS');if(!state.playing)break;}
    state.noteCursor=E.pendingIndex(state.notes,state.noteCursor);
-   if(state.playing&&$('practice').checked&&state.practiceStart!==null&&state.practiceEnd!==null&&t>=state.practiceEnd){jumpToPracticeStart();}\n    if(state.playing&&state.practiceEnd===null&&t>=state.buffer.duration+Math.max(0,chartOffset)+E.HIT_WINDOW+.02)finish();if(t>=0&&$('bgVideo').src&&$('bgVideo').paused)playBackground();
+   if(state.playing&&$('practice').checked&&state.practiceStart!==null&&state.practiceEnd!==null&&t>=state.practiceEnd){jumpToPracticeStart();}
+    if(state.playing&&(!$('practice').checked||state.practiceEnd===null)&&t>=state.buffer.duration+Math.max(0,chartOffset)+E.HIT_WINDOW+.02)finish();if(t>=0&&$('bgVideo').src&&$('bgVideo').paused)playBackground();
   }
   if(state.playing&&t<0)$('countdown').textContent=Math.ceil(-t);else $('countdown').textContent='';
  }
