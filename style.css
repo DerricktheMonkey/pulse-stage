@@ -30,3 +30,5 @@
 .battle-difficulty{display:grid;gap:8px;font-size:11px;margin:16px 0}.battle-difficulty small{color:var(--muted);line-height:1.6}.battle-difficulty select{max-width:260px}
 
 .board-scroll{overflow-x:auto;margin-top:20px}.scoreboard{width:100%;border-collapse:collapse;text-align:left;font-size:13px}.scoreboard th,.scoreboard td{padding:12px 8px;border-bottom:1px solid #ffffff18;white-space:nowrap}.scoreboard th{color:var(--muted);font-size:11px}#leaderboardDialog{width:min(680px,94vw)}#boardName{margin-top:6px}#boardStatus{min-height:24px;color:var(--muted)}
+
+#difficulties{flex-wrap:wrap}#difficulties [data-diff="impossible"].selected{background:#622519;color:#ffd7a6}#difficulties [data-diff="impossible"]{color:#ffb66c}

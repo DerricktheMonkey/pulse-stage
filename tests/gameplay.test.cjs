@@ -35,7 +35,7 @@ assert.equal(context.state.maxCombo,2);assert.equal(context.state.runGrades.leng
 assert(!html.includes('id="streakBreak"'));assert(!app.includes('updatePerfectStreak'));
 console.log('PASS: Perfect-only combos reset on Great, Good and Miss, and no streak-break banner remains.');
 
-for(const [difficulty,misses] of Object.entries({easy:13,normal:9,hard:5,insane:3})){
+for(const [difficulty,misses] of Object.entries({easy:13,normal:9,hard:5,insane:3,impossible:2})){
  context.state.difficulty=difficulty;context.state.health=100;els.practice.checked=false;failed=false;
  for(let i=0;i<misses-1;i++){context.judge({lane:0},'MISS');assert(!failed,difficulty+' failed too soon');}
  context.judge({lane:0},'MISS');assert(failed,difficulty+' should fail at the configured miss total');

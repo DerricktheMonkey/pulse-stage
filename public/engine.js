@@ -69,8 +69,55 @@ function insanePatterns(notes,events=[]){
  }
  return [...out,...extra].sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
+// Revoice confirmed musical attacks into bounded expert patterns. Never add a
+// timestamp between attacks: triplets/trills must already exist in the audio.
+function impossiblePatterns(notes,events=[],bpm=120){
+ const out=notes.map(n=>({...n})),reserved=new Set();let lastTrill=-Infinity,lastJack=-Infinity,lastTriplet=-Infinity;
+ function assign(indices,lanes){
+  const replacements=new Map(indices.map((index,j)=>[index,lanes[j]])),last=[-Infinity,-Infinity,-Infinity,-Infinity];let previousLane=-1,repeats=0;
+  for(let i=Math.max(0,indices[0]-8);i<Math.min(out.length,indices.at(-1)+9);i++){
+   const n=out[i],lane=replacements.get(i)??n.lane;
+   if(n.time-last[lane]<.105-1e-6)return false;last[lane]=n.time+(n.duration||0);repeats=lane===previousLane?repeats+1:1;previousLane=lane;if(repeats>3)return false;
+  }
+  indices.forEach((index,j)=>{out[index].lane=lanes[j];reserved.add(index);});return true;
+ }
+ for(let i=2;i<out.length-2;i++){
+  if(out[i].duration||reserved.has(i))continue;
+  const step=out[i+1].time-out[i].time;
+  // Three attacks at a detected beat's thirds become a compact three-finger roll.
+  const third=60/bpm/3,triplet=Math.abs(step-third)<.025&&Math.abs(out[i+2].time-out[i+1].time-step)<.022;
+  if(triplet&&out[i].time-lastTriplet>=1.3&&step>=.07&&step<=.23&&!out.slice(i,i+3).some((n,j)=>n.duration||reserved.has(i+j))){
+   const start=out[i].lane,rolls=[[start,(start+2)%4,(start+1)%4],[0,2,1],[3,1,2]];
+   if(rolls.some(lanes=>assign([i,i+1,i+2],lanes))){lastTriplet=out[i+2].time;i+=2;continue;}
+  }
+  // Six to eight hits on two fingers, then a recovery section on four lanes.
+  if(step>=.065&&step<=.16&&out[i].time-lastTrill>=1.8){
+   let end=i+1;while(end+1<out.length&&end-i<7&&!out[end+1].duration&&!reserved.has(end+1)&&Math.abs(out[end+1].time-out[end].time-step)<.022)end++;
+   if(end-i>=5){const indices=Array.from({length:end-i+1},(_,j)=>i+j),pairs=[[0,2],[1,3],[0,3],[1,2]];
+    if(pairs.some(pair=>assign(indices,indices.map((_,j)=>pair[j%2])))){lastTrill=out[end].time;i=end;continue;}
+   }
+  }
+  // Keep the previous tier's short single-finger bursts, with strict recovery.
+  if(step>=.11&&step<=.17&&Math.abs(out[i+2].time-out[i+1].time-step)<.02&&out[i].time-lastJack>=4&&!out.slice(i,i+3).some((n,j)=>n.duration||reserved.has(i+j))){
+   if([0,1,2,3].some(lane=>assign([i,i+1,i+2],[lane,lane,lane]))){lastJack=out[i+2].time;i+=2;}
+  }
+ }
+ const last=[-Infinity,-Infinity,-Infinity,-Infinity],extra=[];let chordAt=-Infinity,chordIndex=-4,chords=0;
+ for(let i=0;i<out.length;i++){
+  const n=out[i];last[n.lane]=n.time+(n.duration||0);
+  if(i<2||n.duration||reserved.has(i)||i-chordIndex<4||n.time-chordAt<.4||out[i-1]&&n.time-out[i-1].time<.075||out[i+1]&&out[i+1].time-n.time<.075)continue;
+  const local=events.slice(Math.max(0,i-4),i+5).map(e=>e.strength||0).sort((a,b)=>a-b);
+  if(local.length&&(events[i]?.strength||0)<local[Math.floor(local.length*.5)])continue;
+  const candidates=[0,1,2,3].filter(l=>l!==n.lane&&n.time-last[l]>=.14&&!out.slice(i+1,i+9).some(next=>next.lane===l&&next.time-n.time<.14));
+  candidates.sort((a,b)=>(Math.floor(a/2)===Math.floor(n.lane/2))-(Math.floor(b/2)===Math.floor(n.lane/2))||last[a]-last[b]);
+  const count=chords%4===3?2:1;let added=0;
+  for(const lane of candidates.slice(0,count)){extra.push({time:n.time,lane,duration:0});last[lane]=n.time;added++;}
+  if(added){chords++;chordAt=n.time;chordIndex=i;}
+ }
+ return [...out,...extra].sort((a,b)=>a.time-b.time||a.lane-b.lane);
+}
 function analyze(samples,rate,difficulty='normal'){
- const insane=difficulty==='insane',hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
+ const impossible=difficulty==='impossible',insane=difficulty==='insane'||impossible,hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
  const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[];let prev=new Float64Array(512);
  for(let frame=0;frame<env.length;frame++){
   const mag=spectrum(samples,frame*hop-512);let rise=0,melodyRise=0,peak=0,bin=0;
@@ -115,32 +162,33 @@ function analyze(samples,rate,difficulty='normal'){
   // This adds detected music events, never notes on an invented beat grid.
   for(const p of rhythmAttacks){
    const frame=Math.round(p.time/dt),rise=energyFlux[frame];
-   if(rise>Math.max(.003,env[Math.max(0,frame-1)]*.35)&&!raw.some(n=>Math.abs(n.time-p.time)<.065))raw.push(p);
+   if(rise>Math.max(.003,env[Math.max(0,frame-1)]*.35)&&!raw.some(n=>Math.abs(n.time-p.time)<(impossible?.045:.065)))raw.push(p);
   }
 
  }
- raw.sort((a,b)=>a.time-b.time);const peaks=[];for(const p of raw){const previous=peaks[peaks.length-1];if(previous&&p.time-previous.time<(insane?.055:.075)){if(p.strength>previous.strength)peaks[peaks.length-1]=p;}else peaks.push(p);}
+ raw.sort((a,b)=>a.time-b.time);const peaks=[];for(const p of raw){const previous=peaks[peaks.length-1];if(previous&&p.time-previous.time<(impossible?.04:insane?.055:.075)){if(p.strength>previous.strength)peaks[peaks.length-1]=p;}else peaks.push(p);}
  let bpm=120,best=0;for(let b=75;b<=180;b++){let real=0,imag=0;for(const p of peaks){const phase=2*Math.PI*p.time*b/60;real+=p.strength*Math.cos(phase);imag+=p.strength*Math.sin(phase);}const score=real*real+imag*imag;if(score>best){best=score;bpm=b;}}
- const gap={easy:.34,normal:.24,hard:.15,insane:.065}[difficulty]||.24,selected=[];
+ const gap={easy:.34,normal:.24,hard:.15,insane:.065,impossible:.045}[difficulty]||.24,selected=[];
  for(const p of peaks){if(p.time<.35)continue;const previous=selected[selected.length-1];if(previous&&p.time-previous.time<gap){if(p.strength>previous.strength)selected[selected.length-1]=p;}else selected.push(p);}
  const frequencies=selected.map(p=>p.frequency).filter(f=>f>0).sort((a,b)=>a-b),low=frequencies[Math.floor(frequencies.length*.1)]||130,high=frequencies[Math.floor(frequencies.length*.9)]||1000;
  const timed=insane?alignAttacks(samples,rate,selected):selected;
  let notes=timed.map(p=>({time:+p.time.toFixed(3),lane:p.frequency>0?Math.max(0,Math.min(3,Math.round(3*Math.log2(p.frequency/low)/Math.max(.5,Math.log2(high/low))))):1,duration:0}));
- if(insane)notes=insanePatterns(spreadLanes(notes),timed);
- if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=selected[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
+ if(insane&&!impossible)notes=insanePatterns(spreadLanes(notes),timed);
+ if(difficulty!=='easy'&&(!insane||impossible))for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=selected[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i];let space=notes[i+1].time-n.time;if(i%7===3){if(difficulty==='normal'&&space<=.38&&notes[i+2]&&notes[i+2].time-n.time>.38){notes.splice(i+1,1);space=notes[i+1].time-n.time;}if(space>.38){n.duration=+Math.min(.75,space-.08).toFixed(3);}}}
+ if(impossible)notes=impossiblePatterns(spreadLanes(notes),timed,bpm);
  if(difficulty==='hard'){const extra=[];for(let i=0;i<notes.length;i++){const n=notes[i];if(i%4===1&&!n.duration)extra.push({time:n.time,lane:(n.lane+2)%4,duration:0});}notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
- return {notes,bpm,peaks,env,dt,scanVersion:8};
+ return {notes,bpm,peaks,env,dt,scanVersion:9};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
 function scrollTravel(notes,requested=1.8,difficulty='normal'){
- let travel=difficulty==='insane'?Math.min(requested,.8):requested;
+ let travel=difficulty==='impossible'?Math.min(requested,.65):difficulty==='insane'?Math.min(requested,.8):requested;
  const ends=[null,null,null,null];
  for(const n of notes){const prev=ends[n.lane];if(prev){const gap=n.time-prev.time-(prev.duration||0);if(gap>0)travel=Math.min(travel,gap/(prev.duration>.05?.065:.1));}ends[n.lane]=n;}
  return Math.max(.05,travel);
 }
-function missDamage(difficulty='normal'){return {easy:8,normal:12,hard:20,insane:34}[difficulty]||12;}
+function missDamage(difficulty='normal'){return {easy:8,normal:12,hard:20,insane:34,impossible:50}[difficulty]||12;}
 function nextHealth(health,result,difficulty='normal'){return Math.max(0,Math.min(100,health+(result==='MISS'?-missDamage(difficulty):result==='PERFECT'?2:result==='GREAT'?1:0)));}
 function validateChart(data,duration){if(!data||!Array.isArray(data.notes)||data.notes.length>30000)throw Error('Choose a chart JSON containing a notes array (up to 30,000 notes).');const notes=data.notes.map(n=>{if(!Number.isFinite(n.time)||n.time<0||n.time>duration||!Number.isInteger(n.lane)||n.lane<0||n.lane>3||!Number.isFinite(n.duration??0)||(n.duration??0)<0||n.time+(n.duration??0)>duration+.01)throw Error('Notes need a valid time, lane 0–3, and duration within the song.');const out={time:n.time,lane:n.lane,duration:n.duration||0};return out;}).sort((a,b)=>a.time-b.time||a.lane-b.lane);const ends=[-1,-1,-1,-1];for(const n of notes){const lanes=[n.lane];if(lanes.some(l=>n.time<ends[l]-.001))throw Error('Notes cannot overlap in the same lane.');for(const l of lanes)ends[l]=n.time+Math.max(.035,n.duration);}return notes;}
 function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;start<notes.length;){let end=start+1;while(end<notes.length&&Math.abs(notes[end].time-notes[start].time)<=.001)end++;if(new Set(notes.slice(start,end).map(n=>n.lane)).size>1)for(let i=start;i<end;i++)notes[i].chord=true;start=end;}return notes;}
@@ -160,5 +208,5 @@ function nextPlayable(notes,lane,time){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={nextPlayable,missDamage,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={nextPlayable,missDamage,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,judgement,nextHealth,HIT_WINDOW,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

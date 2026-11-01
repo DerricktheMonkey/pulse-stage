@@ -103,7 +103,7 @@ for(const interval of [.065,.09,.125,.16,.25]){
 }
 console.log('PASS: occasional two-note chords, short three-note bursts, cooldowns, safe fastest streams and unchanged musical attack times.');
 
-for(const [difficulty,expected] of Object.entries({easy:13,normal:9,hard:5,insane:3})){
+for(const [difficulty,expected] of Object.entries({easy:13,normal:9,hard:5,insane:3,impossible:2})){
  let health=100,misses=0;while(health>0){health=E.nextHealth(health,'MISS',difficulty);misses++;}
  assert.equal(misses,expected);assert.equal(E.nextHealth(99,'PERFECT',difficulty),100);assert.equal(E.nextHealth(30,'GREAT',difficulty),31);assert.equal(E.nextHealth(30,'GOOD',difficulty),30);
 }
