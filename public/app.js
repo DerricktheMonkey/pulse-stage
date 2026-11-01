@@ -66,7 +66,7 @@ async function begin(){
   requestGameFullscreen();if($('results').open)$('results').close();setTab(false);await audio().resume();
   document.body.classList.add('running');$('countdown').textContent='';status('');await prepareLevelStart();
   if(ticket!==state.startTicket){if(!state.starting)state.media?.pause?.();return;}if(state.difficulty==='impossible')state.notes=E.enrichImpossibleHolds(state.notes);resetRun();if(typeof Leaderboard!=='undefined')Leaderboard.beginRun();
-  state.practiceStart=null;state.practiceEnd=null;state.position=-2;startSource(-2);$('stageMessage').hidden=true;$('pauseBtn').disabled=false;$('pauseBtn').textContent='Ⅱ Pause';$('restartBtn').disabled=false;$('playBtn').innerHTML='RESTART TRACK <span>↻</span>';status('D · F · J · K to play. Escape to pause.');$('game').scrollIntoView({block:'center',behavior:'instant'});
+  state.practiceStart=null;state.practiceEnd=null;delete state.practiceCountdownStart;state.position=-2;startSource(-2);$('stageMessage').hidden=true;$('pauseBtn').disabled=false;$('pauseBtn').textContent='Ⅱ Pause';$('restartBtn').disabled=false;$('playBtn').innerHTML='RESTART TRACK <span>↻</span>';status('D · F · J · K to play. Escape to pause.');$('game').scrollIntoView({block:'center',behavior:'instant'});
  }catch(error){if(ticket===state.startTicket){stopToStudio();status('Could not start this level: '+error.message);}}
  finally{if(ticket===state.startTicket){state.starting=false;$('playBtn').disabled=false;}}
 }
@@ -123,7 +123,7 @@ function render(now){const monitor=typeof PulsePerformance!=='undefined'&&state.
    if(state.playing&&$('practice').checked&&state.practiceStart!==null&&state.practiceEnd!==null&&t>=state.practiceEnd){jumpToPracticeStart();}
     if(state.playing&&(!$('practice').checked||state.practiceEnd===null)&&t>=state.buffer.duration+Math.max(0,chartOffset)+E.HIT_WINDOW+.02)finish();if(t>=0&&$('bgVideo').src&&$('bgVideo').paused)playBackground();
   }
-  if(state.playing&&t<0)$('countdown').textContent=Math.ceil(-t);else $('countdown').textContent='';
+  if(state.playing&&state.practiceCountdownStart!==undefined&&t<state.practiceCountdownStart)$('countdown').textContent=Math.ceil(state.practiceCountdownStart-t);else if(state.playing&&t<0)$('countdown').textContent=Math.ceil(-t);else {$('countdown').textContent='';if(state.practiceCountdownStart!==undefined&&t>=state.practiceCountdownStart)delete state.practiceCountdownStart;}
  }
  
  drawHoldCues(now,active?chartT:0);drawHitEffects(now);if(now>state.feedbackUntil)$('feedback').textContent='';const progress=state.buffer?Math.max(0,Math.min(1,(active?t:state.position)/state.buffer.duration)):0;$('progressFill').style.width=progress*100+'%';$('elapsed').textContent=fmt(active?t:state.position);if(monitor)PulsePerformance.sample(now,t,performance.now()-drawStarted);requestAnimationFrame(render);}
@@ -160,7 +160,16 @@ function jumpToPracticeStart(){
  state.noteCursor=E.pendingIndex(state.notes,0);
  state.position=start;state.effects=[];state.releaseUntil.fill(0);
  if(state.playing){
-  stopSource();startSource(start);
+  // Schedule the section's audio two seconds ahead while the game clock
+  // counts up from start-2. This gives every retry a visible 2-1 countdown.
+  stopSource();
+  const ac=audio(),lead=2;
+  state.origin=ac.currentTime-(start-lead);
+  state.presentationClock={time:audibleContextTime(),wall:performance.now()};
+  const source=ac.createBufferSource();source.buffer=state.buffer;source.connect(gain);
+  state.source=source;source.start(ac.currentTime+lead,start);
+  state.playing=true;state.paused=false;state.resumedAt=ac.currentTime;
+  state.practiceCountdownStart=start;
  }else if(state.paused){
   // Stay paused; resume will use the checkpoint's start position.
   state.position=start;
