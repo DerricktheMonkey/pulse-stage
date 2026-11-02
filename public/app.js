@@ -40,7 +40,7 @@ async function generate(){if(!state.buffer||state.busy)return;stopToStudio();sta
 async function importSong(file){if(!file||state.busy||state.loading)return;if(file.size>150*1024*1024){status('Please choose an audio file smaller than 150 MB.');return;}state.loading=true;stopToStudio();status('Decoding your song…');$('playBtn').disabled=true;try{const bytes=await file.arrayBuffer(),buffer=await audio().decodeAudioData(bytes.slice(0));if(buffer.duration>1200)throw Error('Choose a song shorter than 20 minutes.');state.buffer=buffer;state.communitySongId=null;state.audioBytes=bytes;state.audioType=file.type||'audio/mpeg';state.name=file.name.replace(/\.[^.]+$/,'');state.notes=[];state.analysis=null;state.rating=1;state.customChart=false;state.chordGlow=true;await save('song',{bytes,name:state.name,type:state.audioType});if(state.editor){state.customChart=true;state.rating=1;$('offset').value=0;saveChart();status('Song loaded. Record your own chart with D / F / J / K.');}else await generate();}catch(e){status('Could not load audio. Try an MP3 or WAV. '+e.message);}finally{state.loading=false;updateMeta();$('songFile').value='';}}
 function stopSource(){state.presentationClock=null;if(state.source){state.source.onended=null;try{state.source.stop();}catch{}state.source.disconnect();state.source=null;}}
 function clearInput(){state.pressed.fill(false);state.holds.fill(null);state.pointers.clear();}
-function stopToStudio(keepFullscreen=false){state.startTicket=(state.startTicket||0)+1;state.starting=false;state.maxHealth=100;state.health=Math.min(state.health,100);if(typeof stopEditorTransport==='function')stopEditorTransport();if(!keepFullscreen)leaveFullscreen();stopSource();state.playing=false;state.paused=false;state.position=0;state.practiceStart=null;state.practiceEnd=null;clearInput();document.body.classList.remove('running');if($('pauseMenu').open)$('pauseMenu').close();$('bgVideo').pause();$('pauseBtn').disabled=true;$('restartBtn').disabled=!state.buffer;$('playBtn').disabled=!state.buffer||!state.notes.length||state.busy||state.loading;$('playBtn').innerHTML='PLAY TRACK <span>↗</span>';state.finished=false;state.effects=[];state.releaseUntil.fill(0);updateLife();$('stageMessage').hidden=false;updateStageTitle();$('countdown').textContent='';$('feedback').textContent='';$('combo').textContent='';}
+function stopToStudio(keepFullscreen=false){state.startTicket=(state.startTicket||0)+1;state.starting=false;state.maxHealth=100;state.health=Math.min(state.health,100);if(typeof stopEditorTransport==='function')stopEditorTransport();if(!keepFullscreen)leaveFullscreen();stopSource();state.playing=false;state.paused=false;state.position=0;clearInput();document.body.classList.remove('running');if($('pauseMenu').open)$('pauseMenu').close();$('bgVideo').pause();$('pauseBtn').disabled=true;$('restartBtn').disabled=!state.buffer;$('playBtn').disabled=!state.buffer||!state.notes.length||state.busy||state.loading;$('playBtn').innerHTML='PLAY TRACK <span>↗</span>';state.finished=false;state.effects=[];state.releaseUntil.fill(0);updateLife();$('stageMessage').hidden=false;updateStageTitle();$('countdown').textContent='';$('feedback').textContent='';$('combo').textContent='';}
 function resetRun(maxHealth=100){state.noteCursor=0;state.maxHealth=maxHealth;E.markChords(state.notes);state.notes.forEach(n=>{delete n.result;delete n.started;});state.score=0;state.runGrades=[];state.combo=0;state.maxCombo=0;state.judged=0;state.weight=0;state.health=maxHealth;state.effects=[];state.releaseUntil.fill(0);state.counts={PERFECT:0,GREAT:0,GOOD:0,MISS:0};state.finished=false;clearInput();updateHUD();}
 function requestGameFullscreen(){if(document.fullscreenElement)return;try{const request=document.documentElement.requestFullscreen?.({navigationUI:'hide'});request?.catch(()=>{});}catch{}}
 function leaveFullscreen(){if(document.fullscreenElement){try{document.exitFullscreen()?.catch(()=>{});}catch{}}}
@@ -66,7 +66,7 @@ async function begin(){
   requestGameFullscreen();if($('results').open)$('results').close();setTab(false);await audio().resume();
   document.body.classList.add('running');$('countdown').textContent='';status('');await prepareLevelStart();
   if(ticket!==state.startTicket){if(!state.starting)state.media?.pause?.();return;}if(state.difficulty==='impossible')state.notes=E.enrichImpossibleHolds(state.notes);resetRun();if(typeof Leaderboard!=='undefined')Leaderboard.beginRun();
-  state.practiceStart=null;state.practiceEnd=null;delete state.practiceCountdownStart;state.position=-2;startSource(-2);$('stageMessage').hidden=true;$('pauseBtn').disabled=false;$('pauseBtn').textContent='Ⅱ Pause';$('restartBtn').disabled=false;$('playBtn').innerHTML='RESTART TRACK <span>↻</span>';status('D · F · J · K to play. Escape to pause.');$('game').scrollIntoView({block:'center',behavior:'instant'});
+  state.position=-2;startSource(-2);$('stageMessage').hidden=true;$('pauseBtn').disabled=false;$('pauseBtn').textContent='Ⅱ Pause';$('restartBtn').disabled=false;$('playBtn').innerHTML='RESTART TRACK <span>↻</span>';status('D · F · J · K to play. Escape to pause.');$('game').scrollIntoView({block:'center',behavior:'instant'});
  }catch(error){if(ticket===state.startTicket){stopToStudio();status('Could not start this level: '+error.message);}}
  finally{if(ticket===state.startTicket){state.starting=false;$('playBtn').disabled=false;}}
 }
@@ -80,7 +80,7 @@ function syncVideo(t){
  if(t<0){state.videoTimelineOffset=video.currentTime-t;playBackground();return;}
  if(state.playing)playBackground();
 }
-function startSource(position){if(position<0&&typeof PulsePerformance!=='undefined')PulsePerformance.begin({build:67,level:state.name,difficulty:state.difficulty,motion:$('backgroundMotion')?.checked!==false,background:state.backgroundFile?.type||state.media?.tagName||'none',canvas:$('game').width+'×'+$('game').height,browser:navigator.userAgent});stopSource();const ac=audio();state.origin=ac.currentTime-position;state.presentationClock={time:audibleContextTime(),wall:performance.now()};const source=ac.createBufferSource();source.buffer=state.buffer;source.connect(gain);state.source=source;source.start(ac.currentTime+Math.max(0,-position),Math.max(0,position));state.playing=true;state.paused=false;state.resumedAt=ac.currentTime;syncVideo(position);updateLife();}
+function startSource(position){if(position<0&&typeof PulsePerformance!=='undefined')PulsePerformance.begin({build:68,level:state.name,difficulty:state.difficulty,motion:$('backgroundMotion')?.checked!==false,background:state.backgroundFile?.type||state.media?.tagName||'none',canvas:$('game').width+'×'+$('game').height,browser:navigator.userAgent});stopSource();const ac=audio();state.origin=ac.currentTime-position;state.presentationClock={time:audibleContextTime(),wall:performance.now()};const source=ac.createBufferSource();source.buffer=state.buffer;source.connect(gain);state.source=source;source.start(ac.currentTime+Math.max(0,-position),Math.max(0,position));state.playing=true;state.paused=false;state.resumedAt=ac.currentTime;syncVideo(position);updateLife();}
 function pause(){if(typeof BattleMode!=='undefined'&&BattleMode.isRunning()){BattleMode.pause();return;}if(state.playing){state.position=songTime();if(typeof PulsePerformance!=='undefined')PulsePerformance.pause();stopSource();state.playing=false;state.paused=true;state.pressed.fill(false);state.pointers.clear();$('bgVideo').pause();$('pauseBtn').textContent='▶ Resume';$('pauseMenu').showModal();if(typeof refreshPerformanceReport==='function')refreshPerformanceReport();}else if(state.paused){requestGameFullscreen();audio().resume().then(()=>{if($('pauseMenu').open)$('pauseMenu').close();startSource(state.position);$('pauseBtn').textContent='Ⅱ Pause';$('stageMessage').hidden=true;});}}
 function returnToMenu(){if(typeof BattleMode!=='undefined'&&BattleMode.active()){BattleMode.leave();return;}if($('pauseMenu').open)$('pauseMenu').close();stopToStudio();document.querySelector('main').scrollIntoView({block:'start'});status('Back in the studio. Your track and chart are ready.');}
 function chartNotes(){return state.notes.map(n=>({time:n.time,lane:n.lane,duration:n.duration}));}
@@ -120,67 +120,29 @@ function render(now){const monitor=typeof PulsePerformance!=='undefined'&&state.
    state.noteCursor=E.pendingIndex(state.notes,state.noteCursor||0);
    if(state.playing)for(let i=state.noteCursor;i<state.notes.length;i++){const n=state.notes[i];if(n.time>chartT+.2)break;if(!n.result&&!n.started&&chartT>n.time+E.HIT_WINDOW)judge(n,'MISS');if(!state.playing)break;}
    state.noteCursor=E.pendingIndex(state.notes,state.noteCursor);
-   if(state.playing&&$('practice').checked&&state.practiceStart!==null&&state.practiceEnd!==null&&t>=state.practiceEnd){jumpToPracticeStart();}
-    if(state.playing&&(!$('practice').checked||state.practiceEnd===null)&&t>=state.buffer.duration+Math.max(0,chartOffset)+E.HIT_WINDOW+.02)finish();if(t>=0&&$('bgVideo').src&&$('bgVideo').paused)playBackground();
+    if(state.playing&&t>=state.buffer.duration+Math.max(0,chartOffset)+E.HIT_WINDOW+.02)finish();if(t>=0&&$('bgVideo').src&&$('bgVideo').paused)playBackground();
   }
-  if(state.playing&&state.practiceCountdownStart!==undefined&&t<state.practiceCountdownStart)$('countdown').textContent=Math.ceil(state.practiceCountdownStart-t);else if(state.playing&&t<0)$('countdown').textContent=Math.ceil(-t);else {$('countdown').textContent='';if(state.practiceCountdownStart!==undefined&&t>=state.practiceCountdownStart)delete state.practiceCountdownStart;}
+  $('countdown').textContent=state.playing&&t<0?Math.ceil(-t):'';
  }
  
  drawHoldCues(now,active?chartT:0);drawHitEffects(now);if(now>state.feedbackUntil)$('feedback').textContent='';const progress=state.buffer?Math.max(0,Math.min(1,(active?t:state.position)/state.buffer.duration)):0;$('progressFill').style.width=progress*100+'%';$('elapsed').textContent=fmt(active?t:state.position);if(monitor)PulsePerformance.sample(now,t,performance.now()-drawStarted);requestAnimationFrame(render);}
 function laneFromEvent(e){const r=canvas.getBoundingClientRect(),relative=(e.clientX-r.left-r.width*.045)/(r.width*.91);return Math.max(0,Math.min(3,Math.floor(relative*4)));}
 canvas.addEventListener('pointerdown',e=>{e.preventDefault();canvas.setPointerCapture(e.pointerId);const lane=laneFromEvent(e);state.pointers.set(e.pointerId,lane);press(lane);});function pointerUp(e){const lane=state.pointers.get(e.pointerId);if(lane!==undefined){state.pointers.delete(e.pointerId);if(![...state.pointers.values()].includes(lane))release(lane);}}canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',pointerUp);canvas.addEventListener('lostpointercapture',pointerUp);
 const keys=['KeyD','KeyF','KeyJ','KeyK'];
-function practiceCheckpointKey(code){
- if(!$('practice').checked||(!state.playing&&!state.paused))return false;
- if(code==='Backspace'){
-  state.practiceStart=null;state.practiceEnd=null;
-  $('feedback').textContent='CHECKPOINT CLEARED';state.feedbackUntil=performance.now()+1200;
-  status('Practice checkpoint cleared. Space sets a new start.');return true;
- }
- if(code!=='Space')return false;
- const t=Math.max(0,Math.min(state.buffer.duration,songTime()));
- if(state.practiceStart===null||state.practiceEnd!==null){
-  if(state.practiceEnd!==null){jumpToPracticeStart();return true;}
-  state.practiceStart=t;state.practiceEnd=null;
-  $('feedback').textContent='START SET';status('Checkpoint start '+fmt(t)+'. Space again sets the end.');
- }else if(t>state.practiceStart+.2){
-  state.practiceEnd=t;
-  $('feedback').textContent='LOOP SET';status('Practice loop '+fmt(state.practiceStart)+'–'+fmt(t)+'. Space retries; Backspace clears.');
- }else{
-  $('feedback').textContent='END MUST BE LATER';status('Play farther before setting the checkpoint end.');
- }
- state.feedbackUntil=performance.now()+1200;return true;
+function rewindPractice(){
+ if(!$('practice').checked||!state.buffer||(!state.playing&&!state.paused)||typeof BattleMode!=='undefined'&&BattleMode.active())return false;
+ const target=Math.max(0,Math.min(state.buffer.duration,songTime())-5),playing=state.playing;
+ stopSource();resetRun();
+ // Reset retried heads and held keys, skipping only heads before the new audio position.
+ const chartTime=target-offset();
+ for(const note of state.notes)if(note.time<chartTime-.001)note.result='SKIP';
+ state.noteCursor=E.pendingIndex(state.notes,0);state.position=target;
+ if(typeof Leaderboard!=='undefined')Leaderboard.beginRun();
+ if(playing)startSource(target);
+ $('countdown').textContent='';$('feedback').textContent='REWIND';state.feedbackUntil=performance.now()+650;
+ status('Practice · rewound to '+fmt(target)+'. Space rewinds 5 seconds.');return true;
 }
-function jumpToPracticeStart(){
- if(state.practiceStart===null||!state.buffer)return;
- const start=state.practiceStart;
- // Recreate the practice attempt so earlier hits and active holds cannot linger.
- resetRun();
- for(const note of state.notes)if(note.time<start-.001)note.result='SKIP';
- state.noteCursor=E.pendingIndex(state.notes,0);
- state.position=start;state.effects=[];state.releaseUntil.fill(0);
- if(state.playing){
-  // Schedule the section's audio two seconds ahead while the game clock
-  // counts up from start-2. This gives every retry a visible 2-1 countdown.
-  stopSource();
-  const ac=audio(),lead=2;
-  state.origin=ac.currentTime-(start-lead);
-  state.presentationClock={time:audibleContextTime(),wall:performance.now()};
-  const source=ac.createBufferSource();source.buffer=state.buffer;source.connect(gain);
-  state.source=source;source.start(ac.currentTime+lead,start);
-  state.playing=true;state.paused=false;state.resumedAt=ac.currentTime;
-  state.practiceCountdownStart=start;
- }else if(state.paused){
-  // Stay paused; resume will use the checkpoint's start position.
-  state.position=start;
- }
- const video=$('bgVideo');
- if(video.src&&Number.isFinite(video.duration)&&video.duration>0){
-  try{video.currentTime=start%video.duration;}catch{}
- }
- $('feedback').textContent='RETRY';state.feedbackUntil=performance.now()+650;
-}
-function handleGameKeydown(e){if(state.editor||e.target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;if((e.code==='Space'||e.code==='Backspace')&&$('practice').checked){e.preventDefault();if(!e.repeat)practiceCheckpointKey(e.code);return;}const overlay=$('help').open||$('results').open||$('libraryDialog').open||$('localSongsDialog').open||$('battleDialog')?.open||$('battleLeaveDialog')?.open;if(overlay)return;if((e.code==='Enter'||e.code==='NumpadEnter')&&state.paused&&$('pauseMenu').open){e.preventDefault();if(!e.repeat)finish(true,true);return;}if(e.code==='KeyR'&&!e.repeat&&state.paused&&$('pauseMenu').open){e.preventDefault();begin();return;}if(e.code==='Escape'){e.preventDefault();if(e.repeat)return;if(state.paused&&$('pauseMenu').open)returnToMenu();else pause();return;}const lane=keys.indexOf(e.code);if(lane>=0&&!e.repeat){e.preventDefault();press(lane);}}
+function handleGameKeydown(e){if(state.editor||e.target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;const overlay=$('help').open||$('results').open||$('libraryDialog').open||$('localSongsDialog').open||$('battleDialog')?.open||$('battleLeaveDialog')?.open;if(overlay)return;if(e.code==='Space'&&$('practice').checked&&(state.playing||state.paused)&&!(typeof BattleMode!=='undefined'&&BattleMode.active())){e.preventDefault();if(!e.repeat)rewindPractice();return;}if((e.code==='Enter'||e.code==='NumpadEnter')&&state.paused&&$('pauseMenu').open){e.preventDefault();if(!e.repeat)finish(true,true);return;}if(e.code==='KeyR'&&!e.repeat&&state.paused&&$('pauseMenu').open){e.preventDefault();begin();return;}if(e.code==='Escape'){e.preventDefault();if(e.repeat)return;if(state.paused&&$('pauseMenu').open)returnToMenu();else pause();return;}const lane=keys.indexOf(e.code);if(lane>=0&&!e.repeat){e.preventDefault();press(lane);}}
 document.addEventListener('keydown',handleGameKeydown);document.addEventListener('keyup',e=>{if(state.editor)return;const lane=keys.indexOf(e.code);if(lane>=0)release(lane);});window.addEventListener('blur',()=>{if(state.playing)pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.playing)pause();});
 function setTab(editor){if(typeof stopEditorTransport==='function')stopEditorTransport();if(editor&&(state.playing||state.paused))stopToStudio();state.editor=editor;$('gameView').hidden=editor;$('editorView').hidden=!editor;$('playModeBtn').classList.toggle('selected',!editor);$('createModeBtn').classList.toggle('selected',editor);$('playModeBtn').setAttribute('aria-pressed',String(!editor));$('createModeBtn').setAttribute('aria-pressed',String(editor));$('creationSetup').hidden=!editor;document.body.classList.toggle('creation-mode',editor);$('changeSongBtn').hidden=editor;$('stageMode').textContent=editor?'CREATE':'4 KEY';if(editor){drawEditor();if(typeof refreshRecorder==='function')refreshRecorder();}else resize();}
 function drawEditor(){if(typeof renderEditor==='function')renderEditor();}
