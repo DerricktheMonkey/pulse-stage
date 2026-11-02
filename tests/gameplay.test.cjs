@@ -10,7 +10,7 @@ console.log('PASS: gameplay life loss, Practice exemption, hit animation trigger
 
 // Ending a paused run must replace the pause dialog with results without saving a partial best.
 const dialog=()=>({open:false,close(){this.open=false;},showModal(){this.open=true;}}),pauseDialog=dialog(),results=dialog(),heading={};pauseDialog.open=true;results.querySelector=()=>heading;
-const finishEls={pauseMenu:pauseDialog,results,bgVideo:{pause(){}},pauseBtn:{},resultTitle:{},grade:{classList:{toggle(){}}},resultStats:{replaceChildren(){},append(){}}};let saves=0;
+const finishEls={practice:{checked:false},pauseMenu:pauseDialog,results,bgVideo:{pause(){}},pauseBtn:{},resultTitle:{},grade:{classList:{toggle(){}}},resultStats:{replaceChildren(){},append(){}}};let saves=0;
 const stopped={state:{finished:false,playing:false,paused:true,buffer:{duration:100},position:25,judged:2,weight:2,notes:[{},{},{}],counts:{PERFECT:2,GREAT:0,GOOD:0,MISS:0},score:2000,maxCombo:2,best:{},holds:[null,null,null,null]},$:id=>finishEls[id],songTime:()=>stopped.state.position,offset:()=>0,stopSource(){},clearInput(){},leaveFullscreen(){},updateLife(){},E,document:{body:{classList:{remove(){}}},createElement:()=>({append(){}})},save(){saves++;},bestKey:()=> 'track',showBest(){}};
 vm.createContext(stopped);vm.runInContext(app.slice(app.indexOf('function canCompleteRun('),app.indexOf('const canvas=')),stopped);stopped.finish(true,true);
 assert(!pauseDialog.open);assert(results.open);assert(!stopped.state.paused);assert(!stopped.state.playing);assert.equal(stopped.state.position,25);assert.equal(heading.textContent,'TRACK ENDED EARLY');assert.equal(finishEls.grade.textContent,'—');assert.equal(finishEls.resultTitle.textContent,'Results so far.');assert.equal(saves,0);assert.equal(stopped.state.counts.MISS,0);
@@ -41,3 +41,6 @@ for(const [difficulty,misses] of Object.entries({easy:13,normal:9,hard:5,insane:
  context.judge({lane:0},'MISS');assert(failed,difficulty+' should fail at the configured miss total');
 }
 console.log('PASS: real judgement flow applies the selected difficulty life penalty.');
+
+// Training attempts cannot overwrite normal bests or become ranked after practice is toggled off.
+stopped.state.finished=false;stopped.state.trainingRun=true;stopped.state.score=999999;stopped.state.notes.forEach(n=>n.result='PERFECT');stopped.state.judged=2;let eligible=true;stopped.Leaderboard={finishRun(value){eligible=value;}};const beforeTraining=saves;stopped.finish(true);assert.equal(saves,beforeTraining);assert.equal(eligible,false);assert.notEqual(stopped.state.best.track.score,999999);
