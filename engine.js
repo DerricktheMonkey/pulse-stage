@@ -159,6 +159,27 @@ function impossiblePatterns(notes,events=[],bpm=120){
  }
  return [...out,...extra].sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
+// Collapse only a compact group of distinct lanes; never chain an entire run.
+function snapCloseNotes(notes){
+ const out=notes.map(n=>({...n})),ends=[-Infinity,-Infinity,-Infinity,-Infinity];
+ for(let start=0;start<out.length;){
+  const anchor=out[start].time,lanes=new Set([out[start].lane]);let end=start+1;
+  while(end<out.length&&out[end].time-anchor<=CHORD_WINDOW+1e-9&&!lanes.has(out[end].lane)){lanes.add(out[end].lane);end++;}
+  const merged=[];let shifted=false;
+  for(let i=start;i<end;i++){
+   const n=out[i];
+   if(anchor>=ends[n.lane]-.001&&(!n.softChord||Math.abs(n.time-anchor)<=1e-9)){
+    const delta=n.time-anchor;
+    if(delta>1e-9){if(n.duration>.05)n.duration+=delta;n.time=anchor;shifted=true;}
+    merged.push(n);
+   }
+   ends[n.lane]=n.time+Math.max(.035,n.duration||0);
+  }
+  if(shifted&&merged.length>1)for(const n of merged)n.softChord=true;
+  start=end;
+ }
+ return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
+}
 function analyze(samples,rate,difficulty='normal'){
  const impossible=difficulty==='impossible',insane=difficulty==='insane'||impossible,hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
  const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[],bands=impossible?Array.from({length:4},()=>({flux:[],energy:[],pitch:[],tonality:[]})):[];let prev=new Float64Array(512);
@@ -256,7 +277,8 @@ function analyze(samples,rate,difficulty='normal'){
   }
   if(extra.length){notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
  }
- return {notes,bpm,peaks,env,dt,scanVersion:10,rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
+ notes=snapCloseNotes(notes);
+ return {notes,bpm,peaks,env,dt,scanVersion:11,rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
@@ -268,7 +290,7 @@ function scrollTravel(notes,requested=1.8,difficulty='normal'){
 }
 function missDamage(difficulty='normal'){return {easy:8,normal:12,hard:20,insane:34,impossible:50}[difficulty]||12;}
 function nextHealth(health,result,difficulty='normal'){return Math.max(0,Math.min(100,health+(result==='MISS'?-missDamage(difficulty):result==='PERFECT'?2:result==='GREAT'?1:0)));}
-function validateChart(data,duration){if(!data||!Array.isArray(data.notes)||data.notes.length>30000)throw Error('Choose a chart JSON containing a notes array (up to 30,000 notes).');const notes=data.notes.map(n=>{if(!Number.isFinite(n.time)||n.time<0||n.time>duration||!Number.isInteger(n.lane)||n.lane<0||n.lane>3||!Number.isFinite(n.duration??0)||(n.duration??0)<0||n.time+(n.duration??0)>duration+.01)throw Error('Notes need a valid time, lane 0–3, and duration within the song.');const out={time:n.time,lane:n.lane,duration:n.duration||0};return out;}).sort((a,b)=>a.time-b.time||a.lane-b.lane);const ends=[-1,-1,-1,-1];for(const n of notes){const lanes=[n.lane];if(lanes.some(l=>n.time<ends[l]-.001))throw Error('Notes cannot overlap in the same lane.');for(const l of lanes)ends[l]=n.time+Math.max(.035,n.duration);}return notes;}
+function validateChart(data,duration,{snap=true}={}){if(!data||!Array.isArray(data.notes)||data.notes.length>30000)throw Error('Choose a chart JSON containing a notes array (up to 30,000 notes).');const notes=data.notes.map(n=>{if(!Number.isFinite(n.time)||n.time<0||n.time>duration||!Number.isInteger(n.lane)||n.lane<0||n.lane>3||!Number.isFinite(n.duration??0)||(n.duration??0)<0||n.time+(n.duration??0)>duration+.01)throw Error('Notes need a valid time, lane 0–3, and duration within the song.');const out={time:n.time,lane:n.lane,duration:n.duration||0};if(n.softChord===true)out.softChord=true;return out;}).sort((a,b)=>a.time-b.time||a.lane-b.lane);const ends=[-1,-1,-1,-1];for(const n of notes){const lanes=[n.lane];if(lanes.some(l=>n.time<ends[l]-.001))throw Error('Notes cannot overlap in the same lane.');for(const l of lanes)ends[l]=n.time+Math.max(.035,n.duration);}return snap?snapCloseNotes(notes):notes;}
 function enrichImpossibleHolds(notes){
  const out=notes.map(n=>({...n})),base=[...out],extras=[];
  const occupied=(lane,t)=>[...base,...extras].some(n=>n.lane===lane&&t<n.time+Math.max(.035,n.duration||0)+.09&&t+.09>n.time);
@@ -284,10 +306,10 @@ function enrichImpossibleHolds(notes){
   }
  }
  if(!extras.length)return notes;
- out.push(...extras);out.sort((a,b)=>a.time-b.time||a.lane-b.lane);return out;
+ out.push(...extras);out.sort((a,b)=>a.time-b.time||a.lane-b.lane);return snapCloseNotes(out);
 }
 // Only actual simultaneous chart notes receive chord glow. Input leniency is separate.
-function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;start<notes.length;){let end=start+1;while(end<notes.length&&Math.abs(notes[end].time-notes[start].time)<=.001)end++;if(new Set(notes.slice(start,end).map(n=>n.lane)).size>1)for(let i=start;i<end;i++)notes[i].chord=true;start=end;}return notes;}
+function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;start<notes.length;){let end=start+1;while(end<notes.length&&Math.abs(notes[end].time-notes[start].time)<=.001)end++;if(!notes.slice(start,end).some(n=>n.softChord)&&new Set(notes.slice(start,end).map(n=>n.lane)).size>1)for(let i=start;i<end;i++)notes[i].chord=true;start=end;}return notes;}
 function rank(counts,total,complete=true){if(!complete)return 'RETRY';if(total>0&&counts.PERFECT===total&&!(counts.GREAT||counts.GOOD||counts.MISS))return 'S';const judged=(counts.PERFECT||0)+(counts.GREAT||0)+(counts.GOOD||0)+(counts.MISS||0),accuracy=judged?100*((counts.PERFECT||0)+.8*(counts.GREAT||0)+.5*(counts.GOOD||0))/judged:0;return accuracy>=90?'A':accuracy>=80?'B':accuracy>=65?'C':'D';}
 function holdCue(note,time){if(!note||note.duration<=.05||note.result)return null;const remaining=Math.max(0,note.time+note.duration-time);return {phase:remaining>0?'HOLD':'RELEASE',remaining,progress:Math.min(1,remaining/note.duration)};}
 function noteIndex(notes,time){let lo=0,hi=notes.length;while(lo<hi){const mid=(lo+hi)>>>1;if(notes[mid].time<time)lo=mid+1;else hi=mid;}return lo;}
@@ -305,5 +327,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,enrichImpossibleHolds,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,enrichImpossibleHolds,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -69,6 +69,7 @@ const BattleMode=(()=>{
    const [audioResponse,backgroundResponse]=await Promise.all([get('audio'),info.hasBackground?get('background'):null]);const [bytes,background]=await Promise.all([audioResponse.arrayBuffer(),backgroundResponse?backgroundResponse.blob():null]);
    if(abort.signal.aborted||ticket!==session||variantKey()!==key)return;
    if(difficulty!=='original'){const buffer=await audio().decodeAudioData(bytes.slice(0)),analysis=await scanSong(buffer,difficulty);if(abort.signal.aborted||ticket!==session||variantKey()!==key)return;info.chart={...info.chart,notes:analysis.notes,bpm:analysis.bpm,customChart:false,offsetMs:0};info.difficulty=difficulty;}
+   info.chart={...info.chart,notes:RhythmEngine.validateChart(info.chart,info.duration),timingVersion:1};
    const audioHash=await crypto.subtle.digest('SHA-256',bytes),signature=JSON.stringify({audio:Array.from(new Uint8Array(audioHash)),chart:info.chart,difficulty:info.difficulty,duration:info.duration});const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(signature))),n=>n.toString(16).padStart(2,'0')).join('');
    const level={name:info.title,duration:info.duration,audioBytes:bytes,audioType:audioResponse.headers.get('Content-Type')||'audio/mpeg',background:background?new File([background],'Battle background',{type:background.type}):null,chart:info.chart,difficulty:info.difficulty,speed:+B('speed').value};
    if(abort.signal.aborted||ticket!==session||variantKey()!==key)return;
