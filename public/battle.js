@@ -1,8 +1,8 @@
 'use strict';
 const BattleMode=(()=>{
  const R=BattleRules,me={id:crypto.randomUUID(),name:'Player'};
- let link=null,isHost=false,hostId=null,seat=null,code='',model=null,pool=[],rules=null,prepared=null,loadKey='',session=0,seq=0,revision=0,lastRevision=-1,lastPeerAt=0,connectedAt=0,clockOffset=0,clockSamples=[],joined=false,roundLive=false,localDone=false,roundEndHandled=false,lastSend=0,lastPing=0,lastSnapshot=0,lastHits=0;
- let loop=null,loadingAbort=null,applyQueue=Promise.resolve(),warmingKey='';const pending=new Map(),seen=new Map(),reports=[];
+ let link=null,isHost=false,hostId=null,seat=null,code='',model=null,pool=[],rules=null,prepared=null,loadKey='',session=0,seq=0,revision=0,lastRevision=-1,lastPeerAt=0,connectedAt=0,clockOffset=0,clockSamples=[],joined=false,roundLive=false,localDone=false,roundEndHandled=false,lastSend=0,lastPing=0,lastSnapshot=0,lastHits=0,lastVisual=0;
+ let loop=null,loadingAbort=null,applyQueue=Promise.resolve(),warmingKey='';const pending=new Map(),seen=new Map(),reports=[],visualHits=[];
  const B=id=>document.getElementById(id),now=()=>Date.now()+(isHost?0:clockOffset),active=()=>!!link;
  function text(id,value){B(id).textContent=value;}
  function send(type,data={},reliable=false,to=null){if(!link)return;const message={v:1,from:me.id,type,seq:++seq,...data,...(to?{to}:{}),reliable};link.send(message);if(reliable)pending.set(message.seq,{message,at:Date.now(),tries:0});}
@@ -36,11 +36,13 @@ const BattleMode=(()=>{
     lastPeerAt=Date.now();send('welcome',{model},true,message.from);return;
    }
    if(message.from!==model.players[1]?.id)return;lastPeerAt=Date.now();
+   if(message.type==='playfield'){receivePlayfield(message);return;}
    if(message.type==='ping'){send('pong',{sent:message.sent,hostTime:Date.now()},false,message.from);return;}
    command(1,message);
   }else{
    if(message.type==='reject'&&!joined){fail(message.reason||'Could not join this room.');return;}
-   if(!['state','welcome','pong'].includes(message.type))return;
+   if(!['state','welcome','pong','playfield'].includes(message.type))return;
+   if(message.type==='playfield'){if(message.from===hostId){lastPeerAt=Date.now();receivePlayfield(message);}return;}
    if(message.type==='pong'){if(message.from!==hostId||!Number.isFinite(message.sent)||!Number.isFinite(message.hostTime))return;lastPeerAt=Date.now();const rtt=Date.now()-message.sent;if(rtt>=0&&rtt<2000){clockSamples.push({rtt,offset:message.hostTime-(message.sent+Date.now())/2});if(clockSamples.length>10)clockSamples.shift();clockOffset=clockSamples.reduce((a,b)=>a.rtt<b.rtt?a:b).offset;render();}return;}
    const incoming=message.model;if(!incoming||incoming.hostId!==message.from||incoming.players?.[1]?.id!==me.id||incoming.players[0]?.id!==message.from)return;
    hostId=message.from;seat=1;joined=true;lastPeerAt=Date.now();if(incoming.revision<=lastRevision)return;lastRevision=incoming.revision;model=incoming;applyModel();
@@ -80,14 +82,15 @@ const BattleMode=(()=>{
   if(['result','complete'].includes(model.phase)){stopRound();if(!B('battleDialog').open)B('battleDialog').showModal();}
   render();
  }
+ function receivePlayfield(message){if(!roundLive||message.variantKey!==variantKey()||typeof BattleView==='undefined')return;BattleView.receive(message);}
  function startRound(){
-  if(roundLive||!prepared?.hash||!state.buffer)return;SongPreview.stop();if(B('results').open)B('results').close();if(B('pauseMenu').open)B('pauseMenu').close();if(B('battleDialog').open)B('battleDialog').close();setTab(false);resetRun(R.MAX_LIFE);state.notes.forEach((note,index)=>note.battleIndex=index);reports.length=0;roundLive=true;localDone=false;roundEndHandled=false;document.body.classList.add('running');state.position=-5;
+  if(roundLive||!prepared?.hash||!state.buffer)return;SongPreview.stop();if(B('results').open)B('results').close();if(B('pauseMenu').open)B('pauseMenu').close();if(B('battleDialog').open)B('battleDialog').close();setTab(false);resetRun(R.MAX_LIFE);state.notes.forEach((note,index)=>note.battleIndex=index);reports.length=0;visualHits.length=0;lastVisual=0;roundLive=true;localDone=false;roundEndHandled=false;document.body.classList.add('running');if(typeof BattleView!=='undefined')BattleView.begin({notes:state.notes,selfName:model.players[seat].name,opponentName:model.players[1-seat].name});state.position=-5;
   const delay=(model.startAt-now())/1000;if(delay<.2){fail('The synchronized start arrived too late. Rejoin the room to keep the round fair.');return;}
   const outputDelay=Math.max(0,audio().currentTime-audibleContextTime());startSource(-Math.max(0,delay-outputDelay));B('stageMessage').hidden=true;B('pauseBtn').disabled=false;B('pauseBtn').textContent='Ⅱ Battle menu';B('playBtn').disabled=true;B('restartBtn').disabled=true;B('battleHud').hidden=false;B('game').scrollIntoView({block:'center',behavior:'instant'});render();
  }
- function stopRound(){if(!roundLive)return;roundLive=false;reports.length=0;stopSource();state.playing=false;state.paused=false;state.finished=true;clearInput();B('bgVideo').pause();document.body.classList.remove('running');B('battleHud').hidden=true;leaveFullscreen();}
+ function stopRound(){if(!roundLive)return;roundLive=false;reports.length=0;stopSource();state.playing=false;state.paused=false;state.finished=true;clearInput();B('bgVideo').pause();document.body.classList.remove('running');if(typeof BattleView!=='undefined')BattleView.end();B('battleHud').hidden=true;leaveFullscreen();}
  function localEnded(){if(!roundLive||localDone)return;localDone=true;state.position=Math.min(state.buffer.duration,songTime());stopSource();state.playing=false;state.paused=false;state.finished=true;clearInput();B('bgVideo').pause();status('Waiting for synchronized battle results…');}
- function onJudge(note,grade){if(!roundLive)return;reports.push({index:note.battleIndex,grade});}
+ function onJudge(note,grade){if(!roundLive)return;const hit={index:note.battleIndex,grade};reports.push(hit);visualHits.push(hit);if(visualHits.length>64)visualHits.shift();}
  async function nextRound(){
   if(model.phase!=='result'||model.round>=3)return;model.round++;model.phase='picking';model.choices=[];model.votes=[null,null];model.ready=[false,false];model.hashes=[null,null];model.next=[false,false];model.selected=null;model.stats=null;model.startAt=null;prepared=null;loadKey='';rules=null;publish();
   try{const data=await requestAPI('/api/songs?mine=0&q=');pool=data.songs.filter(s=>!s.incomplete);}catch{}
@@ -99,8 +102,9 @@ const BattleMode=(()=>{
   if(!isHost&&joined&&time-lastPing>1000){lastPing=time;send('ping',{sent:time},false,hostId);}
   if((joined&&!isHost||model?.players?.[1])&&lastPeerAt&&time-lastPeerAt>20000&&!['complete','error'].includes(model?.phase)){fail('Your opponent disconnected. This match was stopped.');return;}
   if(!isHost&&!joined&&time-connectedAt>15000){fail('No host responded to this room code. Check the code and ask your friend to keep their room open.');return;}
+  if(roundLive&&time-lastVisual>=80){lastVisual=time;send('playfield',{variantKey:variantKey(),pressed:[0,1,2,3].map(lane=>!!state.pressed?.[lane]),holds:[0,1,2,3].map(lane=>{const note=state.holds?.[lane];return note&&!note.result&&Number.isInteger(note.battleIndex)?note.battleIndex:null;}),hits:visualHits.slice()},false,isHost?model.players[1]?.id:hostId);}
   if(roundLive&&reports.length&&time-lastHits>=120){lastHits=time;const hits=reports.splice(0,64);action('hits',{hits});}
-  if(isHost&&rules&&['countdown','playing'].includes(model.phase)){const elapsed=(time-model.startAt)/1000;if(elapsed>=0)model.phase='playing';R.advance(rules,elapsed,RhythmEngine);model.stats=summary();if(rules.status==='finished'){finishRound();return;}}
+  if(isHost&&rules&&['countdown','playing'].includes(model.phase)){const elapsed=(time-model.startAt)/1000;if(elapsed>=0)model.phase='playing';const cursor=rules.cursor;R.advance(rules,elapsed,RhythmEngine);model.stats=summary();if(rules.cursor!==cursor&&time-lastSnapshot>=120&&rules.status!=='finished'){lastSnapshot=time;publish();}if(rules.status==='finished'){finishRound();return;}}
   if(isHost&&time-lastSnapshot>700){lastSnapshot=time;publish();}
  }
  function render(){
@@ -116,7 +120,7 @@ const BattleMode=(()=>{
   }else if(['result','complete'].includes(phase)){
    SongPreview.stop();const wins=model.results.reduce((a,r)=>{if(r.winner===0||r.winner===1)a[r.winner]++;return a;},[0,0]);text('battleScoreline',model.players[0].name+' '+wins[0]+' — '+wins[1]+' '+model.players[1].name);B('battleResultRows').replaceChildren();for(const result of model.results){const row=document.createElement('p');row.textContent='Round '+result.round+' · '+result.song+' · '+(result.winner===null?'Draw':model.players[result.winner].name+' wins')+' · '+result.players.map(p=>p.accuracy.toFixed(2)+'%').join(' / ');B('battleResultRows').append(row);}if(phase==='complete'){const winner=model.forfeitWinner!==undefined?model.forfeitWinner:model.results.length===3?R.matchWinner(model.results).winner:null;statusBattle(model.error||(winner===null?'Match drawn.':model.players[winner].name+' wins the match!'));}else{const result=model.results.at(-1);statusBattle((result.reason==='knockout'?'Knockout! ':'Song complete. ')+(result.winner===null?'Round drawn.':model.players[result.winner].name+' wins this round.'));B('battleNext').disabled=!!model.next[seat];B('battleNext').textContent=model.next[seat]?'Waiting for opponent…':'Choose song for round '+(model.round+1);}
   }
-  if(model.stats&&seat!==null){const self=model.stats.players[seat],other=model.stats.players[1-seat];state.maxHealth=R.MAX_LIFE;state.health=self.health;updateHUD();text('battleHudRound','BATTLE · ROUND '+model.round+' / 3');text('battleOpponent',model.players[1-seat]?.name||'Opponent');B('battleOpponentLife').style.width=(other.health/R.MAX_LIFE*100)+'%';text('battleOpponentStats',other.health+' LIFE · '+other.accuracy.toFixed(2)+'%');text('battleSelfStats',self.health+' LIFE · '+self.accuracy.toFixed(2)+'%');}
+  if(model.stats&&seat!==null){const self=model.stats.players[seat],other=model.stats.players[1-seat];state.maxHealth=R.MAX_LIFE;state.health=self.health;updateHUD();text('battleHudRound','BATTLE · ROUND '+model.round+' / 3');text('battleOpponent',model.players[1-seat]?.name||'Opponent');B('battleOpponentLife').style.width=(other.health/R.MAX_LIFE*100)+'%';text('battleOpponentStats',other.health+' LIFE · '+other.accuracy.toFixed(2)+'%');text('battleSelfStats',self.health+' LIFE · '+self.accuracy.toFixed(2)+'%');if(typeof BattleView!=='undefined')BattleView.updateStats(self,other);}
  }
  function pause(){if(!roundLive)return;if(B('battleLeaveDialog').open)B('battleLeaveDialog').close();else B('battleLeaveDialog').showModal();}
  function leave(){
@@ -125,5 +129,5 @@ const BattleMode=(()=>{
  }
  B('battleDifficulty').onchange=()=>{if(isHost)action('difficulty',{difficulty:B('battleDifficulty').value});};B('battleBtn').onclick=open;B('battleCreate').onclick=()=>connectRoom(true);B('battleJoin').onclick=()=>connectRoom(false);B('battleReady').onclick=ready;B('battleReload').onclick=()=>{if(model?.ready[seat])return;prepare(true);};B('battleNext').onclick=()=>action('next');B('battleLeave').onclick=leave;B('battleForfeit').onclick=leave;B('battleContinue').onclick=()=>B('battleLeaveDialog').close();B('battleDialog').addEventListener('cancel',event=>{if(active()){event.preventDefault();if(roundLive)pause();else leave();}});B('battleCopy').onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+location.pathname+'?battle='+code);statusBattle('Invite link copied. Send it to your opponent.');}catch{statusBattle('Share room code '+code+' with your opponent.');}};
  const invite=new URLSearchParams(location.search).get('battle');if(invite){B('battleCodeInput').value=invite.toUpperCase().slice(0,10);open();}
- return {active,isRunning:()=>roundLive,onJudge,localEnded,pause,leave};
+ return {active,isRunning:()=>roundLive,onJudge,localEnded,pause,leave,playfieldTime:()=>roundLive?(now()-model.startAt)/1000:songTime()};
 })();
