@@ -44,3 +44,11 @@ console.log('PASS: real judgement flow applies the selected difficulty life pena
 
 // Training attempts cannot overwrite normal bests or become ranked after practice is toggled off.
 stopped.state.finished=false;stopped.state.trainingRun=true;stopped.state.score=999999;stopped.state.notes.forEach(n=>n.result='PERFECT');stopped.state.judged=2;let eligible=true;stopped.Leaderboard={finishRun(value){eligible=value;}};const beforeTraining=saves;stopped.finish(true);assert.equal(saves,beforeTraining);assert.equal(eligible,false);assert.notEqual(stopped.state.best.track.score,999999);
+
+// Full shortcut-to-results path from a practice freeze with a dropdown still focused.
+for(const id of ['help','libraryDialog','localSongsDialog'])finishEls[id]={open:false};
+results.open=false;stopped.state.finished=false;stopped.state.paused=true;stopped.state.playing=false;stopped.state.practiceFrozen=true;
+vm.runInContext(app.slice(app.indexOf('function handleGameKeydown('),app.indexOf("document.addEventListener('keydown',handleGameKeydown")),stopped);
+let consumed=false;stopped.handleGameKeydown({key:'Enter',code:'Enter',target:{tagName:'SELECT'},preventDefault(){consumed=true;},stopPropagation(){}});
+assert(consumed&&results.open&&stopped.state.finished);assert(!stopped.state.paused&&!stopped.state.playing&&!stopped.state.practiceFrozen);
+console.log('PASS: focused-dropdown Enter reaches actual finish logic and opens results from menu-free practice freeze.');
