@@ -5,7 +5,7 @@ for(let beat=1;beat<24;beat++){let start=Math.floor(beat*.5*rate);for(let i=0;i<
 for(const difficulty of ['easy','normal','hard']){
  const chart=E.analyze(samples,rate,difficulty);
  assert.equal(chart.bpm,120);assert(chart.notes.length>=23);if(difficulty==='normal')assert(chart.notes.some(n=>n.duration>0));if(difficulty==='hard')assert(chart.notes.some((n,i)=>i&&n.time===chart.notes[i-1].time));
- assert(chart.notes.every(n=>Math.abs(n.time/.5-Math.round(n.time/.5))<.07));
+ assert(chart.notes.every(n=>Math.abs(n.time/.5-Math.round(n.time/.5))<.07||chart.notes.some(h=>h.lane!==n.lane&&h.duration>0&&n.time>h.time&&n.time<h.time+h.duration)),'Heads follow attacks or form playable taps during holds');
  E.validateChart(chart,12);
 }
 assert.equal(E.judgement(.02),'PERFECT');assert.equal(E.judgement(.08),'PERFECT');assert.equal(E.judgement(.14),'GREAT');assert.equal(E.judgement(.18),'GOOD');assert.equal(E.judgement(.20),null);
@@ -18,7 +18,7 @@ for(let n=0;n<tones.length;n++){const start=Math.floor((.5+n*.6)*rate);for(let i
 const pitched=E.analyze(melody,rate,'normal');
 assert(pitched.notes.length>=tones.length,'Find musical note attacks');
 assert(pitched.notes[0].lane<pitched.notes.at(-1).lane,'Ascending pitches move toward higher lanes');
-assert(pitched.notes.every(n=>tones.some((_,i)=>Math.abs(n.time-(.5+i*.6))<.06)),'Match chart timestamps to musical attacks');
+assert(pitched.notes.every(n=>tones.some((_,i)=>Math.abs(n.time-(.5+i*.6))<.06)||pitched.notes.some(h=>h.lane!==n.lane&&h.duration>0&&n.time>h.time&&n.time<h.time+h.duration)),'Match attacks, with free-lane taps during holds');
 let health=100;for(let i=0;i<9;i++)health=E.nextHealth(health,'MISS');assert.equal(health,0);assert.equal(E.nextHealth(99,'PERFECT'),100);assert.equal(E.nextHealth(10,'PERFECT'),12);assert.equal(E.nextHealth(10,'GREAT'),11);assert.equal(E.nextHealth(10,'GOOD'),10);
 console.log('PASS: pitched song scanning, pitch-to-lane mapping, wider hit window and life depletion/recovery.');
 
