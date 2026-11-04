@@ -12,6 +12,12 @@ Triplets mean three successive notes spaced at one-third of a beat. They do not 
 
 Two-finger alternating bursts last six to eight attacks, followed by a recovery section. Short single-finger bursts retain a maximum of three hits with a four-second cooldown. Finger-pattern changes require at least 105ms of recovery per finger. Chord lanes require 140ms of space. Double chords remain common; triple chords are limited to every twelfth eligible chord accent and at least twelve seconds apart. Chords stay out of reserved trill/triplet/jack groups.
 
+## Independent sustained holds
+
+Impossible detects sustained pitched audio in each frequency band after mapping its attack patterns. An existing head can become a hold for up to six seconds when its own lane is free, with 105ms recovery before that lane's next head. Sparse sections can therefore support longer holds while the other lanes continue their independently generated melodies. Holds stop at silence, pitch changes, or a new attack in the sustained voice. At most one generated hold is active at a time.
+
+Hold detection does not add notes, force chords, move attack timestamps, or change the other lanes. The old fixed-interval filler passes during scanning and solo playback have been removed for Impossible. Existing authored or saved charts keep their stored heads; regenerate an automatic Impossible chart to apply the new hold mapping.
+
 Automatic scrolling adapts to spacing without moving timestamps. Generated charts can be refined in the editor. Regenerate a saved non-custom chart on Impossible to apply updated mapping.
 
 ## Verification
