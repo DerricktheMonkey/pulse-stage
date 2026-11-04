@@ -12,7 +12,7 @@ for(const step of [.045,.055,.075,.1,.125,1/6,.2,.3]){
  }
  let repeated=1;for(let i=1;i<g.length;i++){repeated=g[i].length===1&&g[i-1].length===1&&g[i][0].lane===g[i-1][0].lane?repeated+1:1;assert(repeated<=3,'Never more than three single-finger hits');}
  chords+=g.filter(a=>a.length>1).length;
- const travel=E.scrollTravel(notes,3,'impossible');assert(travel<=.65);for(const n of notes)assert(n.duration>=0);
+ const travel=E.scrollTravel(notes,3,'impossible');assert.equal(travel,3,'Impossible preserves the selected visual speed');for(const n of notes)assert(n.duration>=0);
 }
 assert(trills>0,'Includes two-finger alternating spam');assert(triplets>0,'Includes three-note rolls on detected beat thirds');assert(chords>0,'Includes simultaneous chords');assert(jacks>0,'Retains short single-finger spam');
 const holdBase=E.spreadLanes([{time:1,lane:0,duration:1},{time:2.5,lane:1,duration:0},{time:3,lane:2,duration:0}]);assert.equal(E.impossiblePatterns(holdBase,[],120)[0].duration,1,'Retain sustained holds');
@@ -26,4 +26,4 @@ const sustained=new Float32Array(rate*6);for(const [start,end,hz] of [[.5,1.8,44
 const noise=new Float32Array(rate*2),vibrato=new Float32Array(rate*2);let seed=19;for(let k=0;k<noise.length;k++){seed=(seed*1664525+1013904223)>>>0;noise[k]=((seed/4294967296)*2-1)*.015;const t=k/rate;vibrato[k]=.3*Math.sin(2*Math.PI*440*t+2*Math.sin(2*Math.PI*5*t));}assert.equal(E.analyze(noise,rate,'impossible').notes.length,0,'Noise is not mapped to a random stream');assert(E.analyze(vibrato,rate,'impossible').notes.length<=2,'Vibrato is not turned into spam');
 assert.equal(E.missDamage('impossible'),50);assert.equal(E.nextHealth(100,'MISS','impossible'),50);assert.equal(E.nextHealth(50,'MISS','impossible'),0);
 const html=fs.readFileSync('public/index.html','utf8');assert(html.includes('data-diff="impossible"'));assert.equal((html.match(/option value="impossible"/g)||[]).length,2,'Editor and battle both offer Impossible');assert(fs.readFileSync('public/analysis-worker.js','utf8').includes('engine.js?v=78'),'Worker uses the current analyzer');
-console.log('PASS: Impossible trills, triplets, short jacks, bounded chords, holds, safe finger spacing, exact attack timestamps, faster scrolling, real audio scanning, silence and all difficulty controls.');
+console.log('PASS: Impossible trills, triplets, short jacks, bounded chords, holds, safe finger spacing, exact attack timestamps, chosen scroll speed, real audio scanning, silence and all difficulty controls.');

@@ -12,7 +12,7 @@ Triplets mean three successive notes spaced at one-third of a beat. They do not 
 
 Two-finger alternating bursts last six to eight attacks, followed by a recovery section. Short single-finger bursts retain a maximum of three hits with a four-second cooldown. Finger-pattern changes require at least 105ms of recovery per finger. Chord lanes require 140ms of space. Double chords remain common; triple chords are limited to every twelfth eligible chord accent and at least twelve seconds apart. Chords stay out of reserved trill/triplet/jack groups.
 
-Automatic scrolling adapts to spacing without moving timestamps. Generated charts can be refined in the editor. Regenerate a saved non-custom chart on Impossible to apply updated mapping.
+The Note travel time slider applies to every difficulty, including Impossible. Dense charts use thinner note heads and hold caps instead of forcing a faster scroll; chart timestamps and hit windows stay unchanged. Generated charts can be refined in the editor. Regenerate a saved non-custom chart on Impossible to apply updated mapping.
 
 ## Verification
 

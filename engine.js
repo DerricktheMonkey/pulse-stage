@@ -280,13 +280,17 @@ function analyze(samples,rate,difficulty='normal'){
  notes=snapCloseNotes(notes);
  return {notes,bpm,peaks,env,dt,scanVersion:11,rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
 }
-// Note heads occupy at most .082 of the lane height, plus a visible gap.
-// Speed changes travel distance only; chart timestamps never change.
+// Travel time is a visual preference, independent of chart difficulty/density.
 function scrollTravel(notes,requested=1.8,difficulty='normal'){
- let travel=difficulty==='impossible'?Math.min(requested,.65):difficulty==='insane'?Math.min(requested,.8):requested;
+ return Math.max(.6,Math.min(3,Number(requested)||1.8));
+}
+// Fit dense note heads into the chosen travel time instead of forcing the
+// whole chart to move faster because of one closely spaced pair.
+function noteScale(notes,travel=1.8){
+ let scale=1;
  const ends=[null,null,null,null];
- for(const n of notes){const prev=ends[n.lane];if(prev){const gap=n.time-prev.time-(prev.duration||0);if(gap>0)travel=Math.min(travel,gap/(prev.duration>.05?.065:.1));}ends[n.lane]=n;}
- return Math.max(.05,travel);
+ for(const n of notes){const prev=ends[n.lane];if(prev){const gap=n.time-prev.time-(prev.duration||0);if(gap>0)scale=Math.min(scale,gap/(travel*(prev.duration>.05?.065:.1)));}ends[n.lane]=n;}
+ return scale;
 }
 function missDamage(difficulty='normal'){return {easy:8,normal:12,hard:20,insane:34,impossible:50}[difficulty]||12;}
 function nextHealth(health,result,difficulty='normal'){return Math.max(0,Math.min(100,health+(result==='MISS'?-missDamage(difficulty):result==='PERFECT'?2:result==='GREAT'?1:0)));}
@@ -327,5 +331,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,enrichImpossibleHolds,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,insanePatterns,alignAttacks,spreadLanes,scrollTravel,noteScale,analyze,validateChart,snapCloseNotes,enrichImpossibleHolds,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

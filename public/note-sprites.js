@@ -1,11 +1,11 @@
 (function(root){'use strict';
 function createCache(doc){
  let key='',current=null,owned=[];
- function prepare(width,height,dpr,palette){
+ function prepare(width,height,dpr,palette,noteScale=1){
   if(!(width>0&&height>70&&dpr>0)||!palette?.length)return null;
-  const signature=[width,height,dpr,...palette].join('|');if(signature===key)return current;
+  const signature=[width,height,dpr,noteScale,...palette].join('|');if(signature===key)return current;
   for(const canvas of owned){canvas.width=1;canvas.height=1;}owned=[];key='';current=null;
-  const laneWidth=width*.91/4,laneHeight=height-70,pad=56,heads=new Map(),caps=new Map();
+  const laneWidth=width*.91/4,laneHeight=(height-70)*noteScale,pad=56,heads=new Map(),caps=new Map();
   function fail(){for(const canvas of owned){canvas.width=1;canvas.height=1;}owned=[];key=signature;return null;}
   function image(halfHeight,paint){
    const width=laneWidth+pad*2,height=halfHeight*2+pad*2,center=pad+halfHeight,canvas=doc.createElement('canvas');canvas.width=Math.ceil(width*dpr);canvas.height=Math.ceil(height*dpr);owned.push(canvas);
