@@ -216,7 +216,9 @@ function balanceDensity(notes,attacks,duration,difficulty='normal'){
  }
  if(out.length>=lower||groups.length<8)return out;
  const recovery={easy:.22,normal:.18,hard:.14,insane:.105,impossible:.105}[difficulty]||.18;
- const headGap={easy:.30,normal:.20,hard:.12,insane:.065,impossible:.04}[difficulty]||.20;
+ // Keep every added attack outside the 40ms chord-snap window, including on
+ // Impossible, so it remains an independent rhythmic press after saving.
+ const headGap={easy:.30,normal:.20,hard:.12,insane:.065,impossible:.055}[difficulty]||.20;
  const lanes=Array.from({length:4},(_,lane)=>out.filter(n=>n.lane===lane)),heads=out.map(n=>n.time).sort((a,b)=>a-b);
  const index=(list,time,get=n=>n.time)=>{let a=0,b=list.length;while(a<b){const m=(a+b)>>>1;if(get(list[m])<time)a=m+1;else b=m;}return a;};
  function free(lane,time){const list=lanes[lane],i=index(list,time),before=list[i-1],after=list[i];return (!before||time>=before.time+Math.max(.035,before.duration||0)+recovery-1e-9)&&(!after||time+recovery<=after.time+1e-9);}
@@ -229,18 +231,8 @@ function balanceDensity(notes,attacks,duration,difficulty='normal'){
   const at=index(heads,a.time,n=>n);if(at&&a.time-heads[at-1]<headGap||at<heads.length&&heads[at]-a.time<headGap)continue;
   const lane=[a.lane,0,1,2,3].find(l=>Number.isInteger(l)&&l>=0&&l<4&&free(l,a.time));if(lane!==undefined)add(a.time,lane);
  }
- // Harder tiers can use a modest number of double accents at real musical
- // heads. No added triple chords, hold-triggered taps, or off-beat filler.
- if(out.length<lower&&['hard','insane','impossible'].includes(difficulty)){
-  const occupiedHolds=out.filter(n=>n.duration>.05),limit=Math.ceil(groups.length*.5);let accents=0,lastAccent=-Infinity;
-  for(const group of groups){
-   if(out.length>=target||accents>=limit)break;
-   const n=group[0];if(group.length!==1||n.duration>.05||n.time-lastAccent<.32||occupiedHolds.some(h=>n.time>=h.time-.04&&n.time<=h.time+h.duration+.04))continue;
-   const at=index(heads,n.time,n=>n);if(heads[at+1]!==undefined&&Math.abs(heads[at+1]-n.time)<.001)continue;
-   const lane=[(n.lane+2)%4,(n.lane+1)%4,(n.lane+3)%4].find(l=>free(l,n.time));
-   if(lane!==undefined){add(n.time,lane);accents++;lastAccent=n.time;}
-  }
- }
+ // An unsupported density target stays underfilled. Adding a second lane at
+ // an existing head increases chord size rather than rhythmic complexity.
  return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
 // Collapse only a compact group of distinct lanes; never chain an entire run.
@@ -361,7 +353,7 @@ function analyze(samples,rate,difficulty='normal'){
  notes=balanceDensity(notes,densityAttacks,samples.length/rate,difficulty);
  if(impossible)notes=impossibleHolds(notes,bands,dt,samples.length/rate);
  notes=snapCloseNotes(notes);
- return {notes,bpm,peaks,env,dt,scanVersion:13,density:{targetPerSecond:DENSITY_RATES[difficulty]||2.6,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
+ return {notes,bpm,peaks,env,dt,scanVersion:14,density:{targetPerSecond:DENSITY_RATES[difficulty]||2.6,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
