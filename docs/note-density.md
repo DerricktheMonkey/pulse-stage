@@ -15,3 +15,5 @@ The budget is approximate. Charts between 85 and 125 percent of the target can r
 Insufficient musical material remains sparse. Silence, isolated sustained tones, and passages without enough independent attacks do not receive random notes to meet a quota. Impossible holds are detected after density balancing, so hold detection still leaves the other melody heads unchanged. Existing saved and authored charts are not rewritten; regenerate an automatic chart to use the new balance.
 
 The scroll-speed calculation, note sizes, hit windows, playback rate, and animation clock are unchanged by this update.
+
+Impossible additionally fills locally sparse, audible sections after this balancing pass. The whole-song target does not block that pass. The Fill sparse sections action is add-only and preserves the loaded chart instead of applying pruning or regenerating its existing patterns.

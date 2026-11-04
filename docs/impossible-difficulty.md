@@ -20,6 +20,14 @@ Hold detection does not add notes, force chords, move attack timestamps, or chan
 
 Automatic scrolling adapts to spacing without moving timestamps. Generated charts can be refined in the editor. Regenerate a saved non-custom chart on Impossible to apply updated mapping.
 
+## Continuous rhythm in sparse sections
+
+Impossible now runs a local gap-filling pass after its existing notes and holds are finalized. It first recovers unused detected attacks, then fills sparse audible sections with sixteenth-note or triplet subdivisions when detected attacks establish a sufficiently consistent beat. The local pass can add notes even when the whole song has reached its density target. Dense runs are left alone; silence and sounds without an established rhythm are not padded.
+
+Every existing head, lane, chord, and hold release is preserved. Added presses stay outside the close-note chord window and respect held-lane occupancy and finger recovery. They do not create extra simultaneous notes or change scroll speed, note size, or the animation clock.
+
+Select Impossible and use **Fill sparse sections** to extend the currently loaded chart without rebuilding it. The action reuses cached audio analysis when available and saves the extended chart locally. Pressing it again does not accumulate another layer of filler. New automatic Impossible scans also include this local pass; other difficulties retain their previous generation behavior.
+
 ## Verification
 
 `tests/impossible-rhythm.test.cjs` verifies actual beat thirds, sixteenths, increased slow-section density, silent-gap safeguards, rare triple chords and a quiet rapid voice that switches frequency ranges under a louder slow voice. The synthetic mixed-audio fixture maps over 75% of the quiet rapid attacks within 40ms and has over 20% more notes than Insane. This fixture does not establish accuracy on all real songs.

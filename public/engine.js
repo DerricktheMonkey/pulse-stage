@@ -235,6 +235,44 @@ function balanceDensity(notes,attacks,duration,difficulty='normal'){
  // an existing head increases chord size rather than rhythmic complexity.
  return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
+// Add-only Impossible gap filling. Existing timing, lanes, chords and hold
+// releases are immutable; activity is measured locally, not by song totals.
+function fillImpossibleGaps(notes,analysis){
+ const out=notes.map(n=>({...n}));if(!out.length)return out;
+ const {env=[],dt=0,bpm=120,peaks=[],offset=0}=analysis||{},duration=Number(analysis?.duration)||env.length*dt;
+ if(!(dt>0&&duration>0&&env.length))return out;
+ const beat=60/Math.max(75,Math.min(180,Number(bpm)||120)),lanes=Array.from({length:4},(_,lane)=>out.filter(n=>n.lane===lane).sort((a,b)=>a.time-b.time)),heads=[...new Set(out.map(n=>n.time))].sort((a,b)=>a-b);
+ const index=(list,t,get=n=>n.time)=>{let a=0,b=list.length;while(a<b){const m=(a+b)>>>1;if(get(list[m])<t)a=m+1;else b=m;}return a;};
+ const maxEnergy=env.reduce((a,b)=>Math.max(a,b),0),floor=Math.max(.003,maxEnergy*.015);
+ const audible=t=>{const frame=Math.round((t+offset)/dt);let energy=0,count=0;for(let f=Math.max(0,frame-1);f<=Math.min(env.length-1,frame+1);f++){energy+=env[f];count++;}return count&&energy/count>=floor;};
+ const free=(lane,t)=>{const list=lanes[lane],at=index(list,t),before=list[at-1],after=list[at];return (!before||t>=before.time+Math.max(.035,before.duration||0)+.105-1e-9)&&(!after||t+.105<=after.time+1e-9);};
+ let previousLane=-1;
+ function add(t,preferred,source){
+  t=+t.toFixed(3);if(t<.35||t>duration-.05||out.length>=30000||!audible(t))return;
+  const at=index(heads,t,n=>n),before=heads[at-1],after=heads[at];
+  if(before!==undefined&&t-before<.055||after!==undefined&&after-t<.055)return;
+  const local=index(heads,t+.35,n=>n)-index(heads,t-.35,n=>n);
+  if(local>=5&&before!==undefined&&after!==undefined&&after-before<=.22)return;
+  const choices=[0,1,2,3].filter(l=>free(l,t));choices.sort((a,b)=>(a===previousLane?8:0)+(Math.floor(a/2)===Math.floor(previousLane/2)?2:0)+Math.abs(a-preferred)*.1-((b===previousLane?8:0)+(Math.floor(b/2)===Math.floor(previousLane/2)?2:0)+Math.abs(b-preferred)*.1));
+  if(!choices.length)return;const lane=choices[0],n={time:t,lane,duration:0,fillSource:source};out.push(n);lanes[lane].splice(index(lanes[lane],t),0,n);heads.splice(at,0,t);previousLane=lane;
+ }
+ // Recover unused real attacks before considering musical subdivisions.
+ for(const p of peaks)add(p.time-offset,Number.isInteger(p.lane)?p.lane:1,'attack');
+ const anchors=peaks.filter(p=>Number.isFinite(p.time)&&p.time>=.35).map(p=>p.time-offset);
+ if(anchors.length>=6&&anchors.at(-1)-anchors[0]>=beat*2){
+  const sample=Array.from({length:Math.min(256,anchors.length)},(_,i)=>anchors[Math.floor(i*anchors.length/Math.min(256,anchors.length))]);let fit={score:0,phase:0,parts:4};
+  for(const parts of [4,3])for(const phase of sample.slice(0,12)){
+   const step=beat/parts,tolerance=Math.min(.028,step*.22),score=sample.filter(t=>Math.abs((t-phase)/step-Math.round((t-phase)/step))*step<=tolerance).length/sample.length;
+   if(score>fit.score)fit={score,phase,parts};
+  }
+  if(fit.score>=.65){
+   let parts=fit.parts===3?6:4;while(beat/parts>.16)parts*=2;
+   const step=beat/parts,first=Math.ceil((.35-fit.phase)/step),last=Math.floor((duration-.05-fit.phase)/step),roll=[0,2,1,3];
+   for(let tick=first;tick<=last;tick++)add(fit.phase+tick*step,roll[((tick%4)+4)%4],fit.parts===3?'triplet':'sixteenth');
+  }
+ }
+ return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
+}
 // Collapse only a compact group of distinct lanes; never chain an entire run.
 function snapCloseNotes(notes){
  const out=notes.map(n=>({...n})),ends=[-Infinity,-Infinity,-Infinity,-Infinity];
@@ -353,7 +391,8 @@ function analyze(samples,rate,difficulty='normal'){
  notes=balanceDensity(notes,densityAttacks,samples.length/rate,difficulty);
  if(impossible)notes=impossibleHolds(notes,bands,dt,samples.length/rate);
  notes=snapCloseNotes(notes);
- return {notes,bpm,peaks,env,dt,scanVersion:14,density:{targetPerSecond:DENSITY_RATES[difficulty]||2.6,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
+ if(impossible)notes=fillImpossibleGaps(notes,{bpm,peaks,env,dt,duration:samples.length/rate});
+ return {notes,bpm,peaks,env,dt,scanVersion:15,density:{targetPerSecond:DENSITY_RATES[difficulty]||2.6,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?[...timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})),...notes.filter(n=>n.fillSource&&n.fillSource!=='attack').map(n=>({time:n.time,type:n.fillSource}))]:[]};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
@@ -385,5 +424,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

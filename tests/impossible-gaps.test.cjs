@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),E=require('../public/engine.js');
+const dt=.01,duration=12,env=Array(1200).fill(.1);for(let i=0;i<45;i++)env[i]=0;for(let i=620;i<680;i++)env[i]=0;for(let i=1150;i<1200;i++)env[i]=0;
+const peaks=Array.from({length:23},(_,i)=>({time:.5+i*.5,strength:1})),analysis={env,dt,duration,bpm:120,peaks};
+const base=[...Array.from({length:25},(_,i)=>({time:+(.5+i*.08).toFixed(3),lane:i%4,duration:0,id:'run'+i})),{time:3,lane:0,duration:3,id:'hold'},{time:4.5,lane:2,duration:0,id:'melody'},{time:7,lane:0,duration:0,id:'end'},...Array.from({length:20},(_,i)=>({time:8+i*.12,lane:i%4,duration:0,id:'late'+i}))].sort((a,b)=>a.time-b.time||a.lane-b.lane);
+const before=JSON.stringify(base),filled=E.fillImpossibleGaps(base,analysis),added=filled.filter(n=>!n.id);
+assert(added.length>=20,'Sparse musical sections receive a sustained rhythmic challenge');
+for(const original of base)assert.deepEqual(filled.find(n=>n.id===original.id),original,'Every original note and hold is exactly preserved');assert.equal(JSON.stringify(base),before);
+assert(added.some(n=>n.time>3.2&&n.time<5.8),'Other melodies continue during the long hold');assert(added.filter(n=>n.time>3&&n.time<6.1).every(n=>n.lane!==0),'Never add a press inside the held lane or its recovery');
+assert(!added.some(n=>n.time>6.23&&n.time<6.77),'True silence stays empty');assert(!added.some(n=>n.time<.42||n.time>11.52),'Silent intro/outro stay empty');
+for(const n of added){assert(filled.filter(other=>other!==n&&Math.abs(other.time-n.time)<.0549).length===0,'Added presses cannot become simultaneous notes');assert(Math.abs((n.time-.5)/.125-Math.round((n.time-.5)/.125))<1e-6,'Additions follow the established beat subdivisions');}
+assert(added.filter(n=>n.time>.7&&n.time<2.2).length===0,'Already dense runs are not overfilled');
+const timeline=[...new Set(filled.map(n=>n.time))];for(let i=1;i<timeline.length;i++){const a=timeline[i-1],b=timeline[i];if(a<6.8&&b>6.2)continue;assert(b-a<=.251,'Audible, rhythm-supported sections do not retain long empty gaps');}
+assert.deepEqual(E.fillImpossibleGaps(filled,analysis),filled,'Repeating the action does not keep accumulating notes');
+const validated=E.validateChart({notes:filled},duration);for(const n of base){const kept=validated.find(x=>x.time===n.time&&x.lane===n.lane);assert(kept&&kept.duration===n.duration,'Save/reload and close-note normalization preserve original heads and releases');}
+assert.deepEqual(E.fillImpossibleGaps(base,{...analysis,env:env.map(()=>0)}),base,'No music means no added notes');
+assert.deepEqual(E.fillImpossibleGaps([{time:.5,lane:0,duration:5}],{...analysis,peaks:[{time:.5}]}),[{time:.5,lane:0,duration:5}],'A lone tone does not establish a fictitious rhythm');
+const shifted=E.fillImpossibleGaps(base,{...analysis,offset:.25});assert(shifted.some(n=>!n.id),'Saved audio offsets still permit rhythmic additions');E.validateChart({notes:shifted},duration);
+// The visible action must use the existing chart, even when rescanning audio
+// returns a different generated chart.
+const app=fs.readFileSync('public/app.js','utf8'),state={difficulty:'impossible',buffer:{duration},notes:base.map(n=>({...n})),customChart:true,analysis:{bpm:120},busy:false,loading:false},statuses=[],saved=[];
+let scans=0,stopped=0,metas=0;const c={E,state,chartNotes:()=>state.notes.map(n=>({...n})),stopToStudio(){stopped++;},status:t=>statuses.push(t),updateMeta(){metas++;},requestAnimationFrame:fn=>fn(),setTimeout:fn=>fn(),scanSong:async()=>{scans++;return {...analysis,notes:[{time:0,lane:3,duration:0}]};},offset:()=>0,saveChart(){saved.push(state.notes.map(n=>({...n})));}};
+vm.createContext(c);vm.runInContext(app.slice(app.indexOf('async function fillSparseSections('),app.indexOf('function stopSource(')),c);
+(async()=>{await c.fillSparseSections();assert.equal(scans,1);assert.equal(stopped,1);assert(state.customChart,'Do not turn an authored chart into a regenerated chart');for(const n of base)assert.deepEqual(state.notes.find(x=>x.id===n.id),n);assert(saved[0].length>base.length);assert(!state.busy);assert(metas>=2);assert.match(statuses.at(-1),/Existing notes and holds kept/);const total=state.notes.length;await c.fillSparseSections();assert.equal(scans,1,'Reuse cached audio analysis');assert.equal(state.notes.length,total);state.difficulty='normal';await c.fillSparseSections();assert.equal(state.notes.length,total,'Only Impossible gets the gap-filling action');console.log('PASS: local rhythmic gap filling, exact note/hold preservation, safe held lanes, dense-run/silence guards, beat alignment, independent presses, save/reload, idempotence, offsets and additive UI workflow.');})();
