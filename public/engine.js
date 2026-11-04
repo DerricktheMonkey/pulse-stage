@@ -190,6 +190,59 @@ function impossibleHolds(notes,tracks,dt,duration){
  }
  return out;
 }
+// A shared head-count budget for each difficulty keeps different song lengths
+// comparable. Silence and a single sustained tone are not extra note sources.
+const DENSITY_RATES={easy:1.8,normal:2.6,hard:3.8,insane:7,impossible:9};
+function balanceDensity(notes,attacks,duration,difficulty='normal'){
+ const rate=DENSITY_RATES[difficulty]||DENSITY_RATES.normal,target=Math.round(Math.max(0,duration)*rate),lower=Math.floor(target*.85),upper=Math.ceil(target*1.25);
+ let out=notes.map(n=>({...n}));
+ if(!out.length||!target)return out;
+ const groups=[];for(const n of out){let group=groups.at(-1);if(!group||Math.abs(group[0].time-n.time)>.001)groups.push(group=[]);group.push(n);}
+ if(out.length>upper){
+  const windows=new Map();for(const group of groups){const key=Math.floor(group[0].time/8);if(!windows.has(key))windows.set(key,[]);windows.get(key).push(group);}
+  const kept=[];let spent=0,processed=0;
+  for(const window of windows.values()){
+   const count=window.reduce((sum,g)=>sum+g.length,0);processed+=count;
+   const budget=Math.round(target*processed/out.length)-spent,chosen=new Set();let cost=0;
+   // Preserve sustained voices, then cover the whole phrase rather than taking
+   // only its beginning or stripping every quiet section.
+   for(let i=0;i<window.length;i++)if(window[i].some(n=>n.duration>.05)){chosen.add(i);cost+=window[i].length;}
+   const average=count/window.length,slots=Math.max(1,Math.floor((budget-cost)/average));
+   for(let j=0;j<slots;j++){const i=Math.min(window.length-1,Math.floor((j+.5)*window.length/slots));if(!chosen.has(i)&&cost+window[i].length<=budget){chosen.add(i);cost+=window[i].length;}}
+   for(let i=0;i<window.length&&cost<budget;i++)if(!chosen.has(i)&&cost+window[i].length<=budget){chosen.add(i);cost+=window[i].length;}
+   for(const i of [...chosen].sort((a,b)=>a-b))kept.push(...window[i]);spent+=cost;
+  }
+  out=kept;
+ }
+ if(out.length>=lower||groups.length<8)return out;
+ const recovery={easy:.22,normal:.18,hard:.14,insane:.105,impossible:.105}[difficulty]||.18;
+ const headGap={easy:.30,normal:.20,hard:.12,insane:.065,impossible:.04}[difficulty]||.20;
+ const lanes=Array.from({length:4},(_,lane)=>out.filter(n=>n.lane===lane)),heads=out.map(n=>n.time).sort((a,b)=>a-b);
+ const index=(list,time,get=n=>n.time)=>{let a=0,b=list.length;while(a<b){const m=(a+b)>>>1;if(get(list[m])<time)a=m+1;else b=m;}return a;};
+ function free(lane,time){const list=lanes[lane],i=index(list,time),before=list[i-1],after=list[i];return (!before||time>=before.time+Math.max(.035,before.duration||0)+recovery-1e-9)&&(!after||time+recovery<=after.time+1e-9);}
+ function add(time,lane){const n={time,lane,duration:0};lanes[lane].splice(index(lanes[lane],time),0,n);heads.splice(index(heads,time,n=>n),0,time);out.push(n);}
+ const queues=new Map();for(const a of attacks)if(a.time>=.35&&a.time<=duration){const key=Math.floor(a.time/8);if(!queues.has(key))queues.set(key,[]);queues.get(key).push(a);}
+ for(const list of queues.values())list.sort((a,b)=>(b.strength||0)-(a.strength||0)||a.time-b.time);
+ const candidates=[];for(let i=0,remaining=true;remaining;i++){remaining=false;for(const list of queues.values())if(i<list.length){candidates.push(list[i]);remaining=true;}}
+ for(const a of candidates){
+  if(out.length>=target)break;
+  const at=index(heads,a.time,n=>n);if(at&&a.time-heads[at-1]<headGap||at<heads.length&&heads[at]-a.time<headGap)continue;
+  const lane=[a.lane,0,1,2,3].find(l=>Number.isInteger(l)&&l>=0&&l<4&&free(l,a.time));if(lane!==undefined)add(a.time,lane);
+ }
+ // Harder tiers can use a modest number of double accents at real musical
+ // heads. No added triple chords, hold-triggered taps, or off-beat filler.
+ if(out.length<lower&&['hard','insane','impossible'].includes(difficulty)){
+  const occupiedHolds=out.filter(n=>n.duration>.05),limit=Math.ceil(groups.length*.5);let accents=0,lastAccent=-Infinity;
+  for(const group of groups){
+   if(out.length>=target||accents>=limit)break;
+   const n=group[0];if(group.length!==1||n.duration>.05||n.time-lastAccent<.32||occupiedHolds.some(h=>n.time>=h.time-.04&&n.time<=h.time+h.duration+.04))continue;
+   const at=index(heads,n.time,n=>n);if(heads[at+1]!==undefined&&Math.abs(heads[at+1]-n.time)<.001)continue;
+   const lane=[(n.lane+2)%4,(n.lane+1)%4,(n.lane+3)%4].find(l=>free(l,n.time));
+   if(lane!==undefined){add(n.time,lane);accents++;lastAccent=n.time;}
+  }
+ }
+ return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
+}
 // Collapse only a compact group of distinct lanes; never chain an entire run.
 function snapCloseNotes(notes){
  const out=notes.map(n=>({...n})),ends=[-Infinity,-Infinity,-Infinity,-Infinity];
@@ -279,7 +332,7 @@ function analyze(samples,rate,difficulty='normal'){
  if(insane&&!impossible)notes=insanePatterns(spreadLanes(notes),timed);
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i],space=notes[i+1].time-n.time;if(space>.65){const start=Math.floor((n.time+.12)/dt),end=Math.floor(Math.min(n.time+space-.16,n.time+1.3)/dt),slice=env.slice(start,end),freq=timed[i].frequency;if(freq>0&&slice.length&&slice.every(x=>x>.015)&&pitch.slice(start,end).filter(f=>f>0&&Math.abs(Math.log2(f/freq))<.18).length>slice.length*.7)n.duration=+Math.min(space-.18,1.1).toFixed(3);}}
  if(difficulty!=='easy'&&!insane)for(let i=0;i<notes.length-1;i++){const n=notes[i];let space=notes[i+1].time-n.time;if(i%7===3){if(difficulty==='normal'&&space<=.38&&notes[i+2]&&notes[i+2].time-n.time>.38){notes.splice(i+1,1);space=notes[i+1].time-n.time;}if(space>.38){n.duration=+Math.min(.75,space-.08).toFixed(3);}}}
- if(impossible)notes=impossibleHolds(impossiblePatterns(spreadLanes(notes),timed,bpm),bands,dt,samples.length/rate);
+ if(impossible)notes=impossiblePatterns(spreadLanes(notes),timed,bpm);
  if(difficulty==='hard'){const extra=[];for(let i=0;i<notes.length;i++){const n=notes[i];if(i%4===1&&!n.duration)extra.push({time:n.time,lane:(n.lane+2)%4,duration:0});}notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
  // The lower tiers retain their existing midpoint tap. Impossible's other
  // voices are already mapped above and receive no hold-triggered filler.
@@ -304,8 +357,11 @@ function analyze(samples,rate,difficulty='normal'){
   }
   if(extra.length){notes.push(...extra);notes.sort((a,b)=>a.time-b.time||a.lane-b.lane);}
  }
+ const densityAttacks=peaks.map(p=>({time:+p.time.toFixed(3),lane:p.frequency>0?Math.max(0,Math.min(3,Math.round(3*Math.log2(p.frequency/low)/Math.max(.5,Math.log2(high/low))))):1,strength:p.strength}));
+ notes=balanceDensity(notes,densityAttacks,samples.length/rate,difficulty);
+ if(impossible)notes=impossibleHolds(notes,bands,dt,samples.length/rate);
  notes=snapCloseNotes(notes);
- return {notes,bpm,peaks,env,dt,scanVersion:12,rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
+ return {notes,bpm,peaks,env,dt,scanVersion:13,density:{targetPerSecond:DENSITY_RATES[difficulty]||2.6,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})):[]};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
@@ -337,5 +393,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);
