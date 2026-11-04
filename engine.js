@@ -193,6 +193,25 @@ function impossibleHolds(notes,tracks,dt,duration){
 // A shared head-count budget for each difficulty keeps different song lengths
 // comparable. Silence and a single sustained tone are not extra note sources.
 const DENSITY_RATES={easy:1.8,normal:2.6,hard:3.8,insane:7,impossible:9};
+// Drum transients need no settled pitch: kicks can sit below the melody bands,
+// while snares/hats are broadband. Compare local flux and reject release edges.
+function percussionAttacks(tracks,dt){
+ const found=[];
+ for(let band=0;band<tracks.length;band++){
+  const track=tracks[band],max=track.flux.reduce((a,b)=>Math.max(a,b),0);let last=-Infinity;
+  for(let i=3;i<track.flux.length-3;i++){
+   const rise=track.flux[i],energy=track.energy[i];if(rise<.0004||rise<max*.025||energy<.002||rise<energy*.10||rise<track.flux[i-1]||rise<=track.flux[i+1]||band===0&&(track.tonality?.[i+2]??1)<.45)continue;
+   let sum=0,count=0;for(let j=Math.max(0,i-8);j<=Math.min(track.flux.length-1,i+8);j++)if(Math.abs(j-i)>1){sum+=track.flux[j];count++;}
+   let before=0,beforeCount=0,after=0;for(let j=Math.max(0,i-6);j<=i-2;j++){before+=track.energy[j];beforeCount++;}for(let j=i+1;j<=i+3;j++)after+=track.energy[j]/3;
+   if(rise<(sum/Math.max(1,count))*(band===0?1.9:1.65)||after<before/Math.max(1,beforeCount)*1.45||track.energy[i+2]<track.energy[i-2]*1.05)continue;
+   const time=+(i*dt).toFixed(3);if(time-last<.055)continue;
+   found.push({time,strength:rise/Math.max(.00001,max),lane:[0,2,3][band],source:'drum'});last=time;
+  }
+ }
+ found.sort((a,b)=>a.time-b.time||b.strength-a.strength);const out=[];
+ for(const event of found){const previous=out.at(-1);if(previous&&event.time-previous.time<.035){if(event.strength>previous.strength)out[out.length-1]=event;}else out.push(event);}
+ return out;
+}
 function balanceDensity(notes,attacks,duration,difficulty='normal'){
  const rate=DENSITY_RATES[difficulty]||DENSITY_RATES.normal,target=Math.round(Math.max(0,duration)*rate),lower=Math.floor(target*.85),upper=Math.ceil(target*1.25);
  let out=notes.map(n=>({...n}));
@@ -238,27 +257,29 @@ function balanceDensity(notes,attacks,duration,difficulty='normal'){
 // Add-only Impossible gap filling. Existing timing, lanes, chords and hold
 // releases are immutable; activity is measured locally, not by song totals.
 function fillImpossibleGaps(notes,analysis){
- const out=notes.map(n=>({...n}));if(!out.length)return out;
- const {env=[],dt=0,bpm=120,peaks=[],offset=0}=analysis||{},duration=Number(analysis?.duration)||env.length*dt;
+ const out=notes.map(n=>({...n}));if(!out.length&&!analysis?.percussion?.length)return out;
+ const {env=[],dt=0,bpm=120,peaks=[],percussion=[],offset=0}=analysis||{},duration=Number(analysis?.duration)||env.length*dt;
  if(!(dt>0&&duration>0&&env.length))return out;
- const beat=60/Math.max(75,Math.min(180,Number(bpm)||120)),lanes=Array.from({length:4},(_,lane)=>out.filter(n=>n.lane===lane).sort((a,b)=>a.time-b.time)),heads=[...new Set(out.map(n=>n.time))].sort((a,b)=>a-b);
+ const tempo=Math.max(45,Math.min(220,Number(bpm)||120)),beat=60/tempo,slow=tempo<=115,lanes=Array.from({length:4},(_,lane)=>out.filter(n=>n.lane===lane).sort((a,b)=>a.time-b.time)),heads=[...new Set(out.map(n=>n.time))].sort((a,b)=>a-b);
  const index=(list,t,get=n=>n.time)=>{let a=0,b=list.length;while(a<b){const m=(a+b)>>>1;if(get(list[m])<t)a=m+1;else b=m;}return a;};
  const maxEnergy=env.reduce((a,b)=>Math.max(a,b),0),floor=Math.max(.003,maxEnergy*.015);
  const audible=t=>{const frame=Math.round((t+offset)/dt);let energy=0,count=0;for(let f=Math.max(0,frame-1);f<=Math.min(env.length-1,frame+1);f++){energy+=env[f];count++;}return count&&energy/count>=floor;};
  const free=(lane,t)=>{const list=lanes[lane],at=index(list,t),before=list[at-1],after=list[at];return (!before||t>=before.time+Math.max(.035,before.duration||0)+.105-1e-9)&&(!after||t+.105<=after.time+1e-9);};
  let previousLane=-1;
- function add(t,preferred,source){
+ function add(t,preferred,source,activity=5){
   t=+t.toFixed(3);if(t<.35||t>duration-.05||out.length>=30000||!audible(t))return;
   const at=index(heads,t,n=>n),before=heads[at-1],after=heads[at];
-  if(before!==undefined&&t-before<.055||after!==undefined&&after-t<.055)return;
+  const separation=source==='drum'?.045:.055;
+  if(before!==undefined&&t-before<separation||after!==undefined&&after-t<separation)return;
   const local=index(heads,t+.35,n=>n)-index(heads,t-.35,n=>n);
-  if(local>=5&&before!==undefined&&after!==undefined&&after-before<=.22)return;
+  if(source!=='drum'&&local>=activity&&before!==undefined&&after!==undefined&&after-before<=(slow?.14:.22))return;
   const choices=[0,1,2,3].filter(l=>free(l,t));choices.sort((a,b)=>(a===previousLane?8:0)+(Math.floor(a/2)===Math.floor(previousLane/2)?2:0)+Math.abs(a-preferred)*.1-((b===previousLane?8:0)+(Math.floor(b/2)===Math.floor(previousLane/2)?2:0)+Math.abs(b-preferred)*.1));
   if(!choices.length)return;const lane=choices[0],n={time:t,lane,duration:0,fillSource:source};out.push(n);lanes[lane].splice(index(lanes[lane],t),0,n);heads.splice(at,0,t);previousLane=lane;
  }
- // Recover unused real attacks before considering musical subdivisions.
- for(const p of peaks)add(p.time-offset,Number.isInteger(p.lane)?p.lane:1,'attack');
- const anchors=peaks.filter(p=>Number.isFinite(p.time)&&p.time>=.35).map(p=>p.time-offset);
+ // Preserve important drum moments even when melody density is already high.
+ for(const p of percussion)add(p.time-offset,p.lane,'drum');
+ for(const p of peaks)add(p.time-offset,Number.isInteger(p.lane)?p.lane:1,'attack',slow?8:5);
+ const anchors=[...peaks,...percussion].filter(p=>Number.isFinite(p.time)&&p.time>=.35).map(p=>p.time-offset).sort((a,b)=>a-b);
  if(anchors.length>=6&&anchors.at(-1)-anchors[0]>=beat*2){
   const sample=Array.from({length:Math.min(256,anchors.length)},(_,i)=>anchors[Math.floor(i*anchors.length/Math.min(256,anchors.length))]);let fit={score:0,phase:0,parts:4};
   for(const parts of [4,3])for(const phase of sample.slice(0,12)){
@@ -266,9 +287,15 @@ function fillImpossibleGaps(notes,analysis){
    if(score>fit.score)fit={score,phase,parts};
   }
   if(fit.score>=.65){
-   let parts=fit.parts===3?6:4;while(beat/parts>.16)parts*=2;
-   const step=beat/parts,first=Math.ceil((.35-fit.phase)/step),last=Math.floor((duration-.05-fit.phase)/step),roll=[0,2,1,3];
-   for(let tick=first;tick<=last;tick++)add(fit.phase+tick*step,roll[((tick%4)+4)%4],fit.parts===3?'triplet':'sixteenth');
+   const roll=[0,2,1,3],firstBar=Math.floor((.35-fit.phase)/(beat*4)),lastBar=Math.floor((duration-.05-fit.phase)/(beat*4));
+   for(let bar=firstBar;bar<=lastBar;bar++){
+    const triplet=fit.parts===3||slow&&((bar%4)+4)%4===3;
+    let parts=triplet?6:slow?8:4;
+    if(slow&&!triplet&&((bar%4)+4)%4===1&&beat/(parts*2)>=.06)parts*=2;
+    while(beat/parts>.14)parts*=2;if(triplet&&slow&&beat/12>=.06)parts=12;
+    const step=beat/parts,start=fit.phase+bar*beat*4,activity=slow?Math.max(7,Math.ceil(.7/step)):5;
+    for(let tick=0;tick<parts*4;tick++)add(start+tick*step,roll[tick%4],triplet?'triplet':slow?'double-time':'sixteenth',activity);
+   }
   }
  }
  return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
@@ -296,7 +323,7 @@ function snapCloseNotes(notes){
 }
 function analyze(samples,rate,difficulty='normal'){
  const impossible=difficulty==='impossible',insane=difficulty==='insane'||impossible,hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
- const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[],bands=impossible?Array.from({length:4},()=>({flux:[],energy:[],pitch:[],tonality:[]})):[];let prev=new Float64Array(512);
+ const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[],bands=impossible?Array.from({length:4},()=>({flux:[],energy:[],pitch:[],tonality:[]})):[],drums=impossible?Array.from({length:3},()=>({flux:[],energy:[],tonality:[]})):[];let prev=new Float64Array(512);
  for(let frame=0;frame<env.length;frame++){
   const mag=spectrum(samples,frame*hop-512);let rise=0,melodyRise=0,peak=0,bin=0;
   for(let k=6;k<Math.min(400,mag.length-1);k++){rise+=Math.max(0,mag[k]-prev[k]);if(k>=12&&k<=185&&mag[k]>=mag[k-1]&&mag[k]>mag[k+1]){const score=mag[k]*Math.pow(k,.3);if(score>peak){peak=score;bin=k;}}}
@@ -313,6 +340,11 @@ function analyze(samples,rate,difficulty='normal'){
    const [lo,hi]=ATTACK_BANDS[band];let energy=0,rise=0,peakBin=lo;
    for(let k=lo;k<hi;k++){energy+=mag[k];rise+=Math.max(0,mag[k]-Math.max(prev[k-1]||0,prev[k],prev[k+1]||0));if(mag[k]>mag[peakBin])peakBin=k;}
    const track=bands[band];track.flux.push(rise);track.energy.push(energy);track.pitch.push(peakBin*rate/1024);track.tonality.push((mag[peakBin-1]+mag[peakBin]+mag[peakBin+1])/Math.max(.00001,energy));
+  }
+  if(impossible)for(let band=0;band<3;band++){
+   const [lo,hi]=[[2,22],[22,120],[120,500]][band];let energy=0,rise=0,peakBin=lo;
+   for(let k=lo;k<Math.min(hi,mag.length);k++){energy+=mag[k];rise+=Math.max(0,mag[k]-prev[k]);if(mag[k]>mag[peakBin])peakBin=k;}
+   drums[band].energy.push(energy);drums[band].flux.push(rise);drums[band].tonality.push((mag[peakBin-1]+mag[peakBin]+mag[peakBin+1])/Math.max(.00001,energy));
   }
   melodicFlux.push(insane?tonalRise:melodyRise);spectralFlux.push(rise);pitch.push(insane?frequency:bin*rate/1024);prev=mag;
  }
@@ -391,8 +423,9 @@ function analyze(samples,rate,difficulty='normal'){
  notes=balanceDensity(notes,densityAttacks,samples.length/rate,difficulty);
  if(impossible)notes=impossibleHolds(notes,bands,dt,samples.length/rate);
  notes=snapCloseNotes(notes);
- if(impossible)notes=fillImpossibleGaps(notes,{bpm,peaks,env,dt,duration:samples.length/rate});
- return {notes,bpm,peaks,env,dt,scanVersion:15,density:{targetPerSecond:DENSITY_RATES[difficulty]||2.6,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?[...timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})),...notes.filter(n=>n.fillSource&&n.fillSource!=='attack').map(n=>({time:n.time,type:n.fillSource}))]:[]};
+ const percussion=impossible?percussionAttacks(drums,dt):[];
+ if(impossible)notes=fillImpossibleGaps(notes,{bpm,peaks,percussion,env,dt,duration:samples.length/rate});
+ return {notes,bpm,peaks,percussion,env,dt,scanVersion:16,density:{targetPerSecond:DENSITY_RATES[difficulty]||2.6,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?[...timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})),...notes.filter(n=>['triplet','sixteenth','double-time'].includes(n.fillSource)).map(n=>({time:n.time,type:n.fillSource}))]:[]};
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
@@ -424,5 +457,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

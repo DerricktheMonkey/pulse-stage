@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),E=require('../public/engine.js');
 const dt=.01,duration=12,env=Array(1200).fill(.1);for(let i=0;i<45;i++)env[i]=0;for(let i=620;i<680;i++)env[i]=0;for(let i=1150;i<1200;i++)env[i]=0;
-const peaks=Array.from({length:23},(_,i)=>({time:.5+i*.5,strength:1})),analysis={env,dt,duration,bpm:120,peaks};
+const peaks=Array.from({length:23},(_,i)=>({time:.5+i*.5,strength:1})),analysis={env,dt,duration,bpm:120,peaks,percussion:[],scanVersion:16};
 const base=[...Array.from({length:25},(_,i)=>({time:+(.5+i*.08).toFixed(3),lane:i%4,duration:0,id:'run'+i})),{time:3,lane:0,duration:3,id:'hold'},{time:4.5,lane:2,duration:0,id:'melody'},{time:7,lane:0,duration:0,id:'end'},...Array.from({length:20},(_,i)=>({time:8+i*.12,lane:i%4,duration:0,id:'late'+i}))].sort((a,b)=>a.time-b.time||a.lane-b.lane);
 const before=JSON.stringify(base),filled=E.fillImpossibleGaps(base,analysis),added=filled.filter(n=>!n.id);
 assert(added.length>=20,'Sparse musical sections receive a sustained rhythmic challenge');

@@ -28,6 +28,14 @@ Every existing head, lane, chord, and hold release is preserved. Added presses s
 
 Select Impossible and use **Fill sparse sections** to extend the currently loaded chart without rebuilding it. The action reuses cached audio analysis when available and saves the extended chart locally. Pressing it again does not accumulate another layer of filler. New automatic Impossible scans also include this local pass; other difficulties retain their previous generation behavior.
 
+## Slow tempo and drum transients
+
+At detected tempos of 115 BPM or lower, sparse-section filling uses double-time subdivisions rather than stopping at the former fixed activity level. Four-beat phrases alternate straight runs, short denser bursts when finger spacing permits, and triplet fills. The music playback rate, existing note timestamps, hold releases, scroll speed, and note dimensions are preserved. Saved BPM values down to 45 BPM are supported by this pass.
+
+A separate percussion detector examines low kick frequencies, midrange attacks, and broadband snare or hat transients. It requires a local spectral-flux peak and sustained energy rise, rejects release edges, and checks low-frequency resonance to avoid treating continuous hiss as kicks. Percussion recovery does not depend on a settled melodic pitch and is not skipped merely because the melody already meets its local density target. Added drum presses remain outside the chord-snap window and use only free lanes.
+
+The tests include synthetic 55 Hz kicks and broadband snares under a louder continuous lead, plus steady-noise rejection. The exact user Blue Bird audio and missed timestamps were unavailable during this update; this fixture verifies the detection mechanism, not coverage of that particular song. Use Fill sparse sections to rescan an older cached analysis and extend its current chart.
+
 ## Verification
 
 `tests/impossible-rhythm.test.cjs` verifies actual beat thirds, sixteenths, increased slow-section density, silent-gap safeguards, rare triple chords and a quiet rapid voice that switches frequency ranges under a louder slow voice. The synthetic mixed-audio fixture maps over 75% of the quiet rapid attacks within 40ms and has over 20% more notes than Insane. This fixture does not establish accuracy on all real songs.
