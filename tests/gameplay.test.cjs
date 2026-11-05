@@ -4,7 +4,7 @@ const context={E,state:{judged:0,counts:{PERFECT:0,GREAT:0,GOOD:0,MISS:0},weight
 vm.createContext(context);vm.runInContext(app.slice(app.indexOf('function judge('),app.indexOf('function press(')),context);
 for(let i=0;i<10;i++)context.judge({lane:0},'MISS');assert(failed);assert.equal(context.state.health,0);
 failed=false;els.practice.checked=true;context.state.health=1;context.judge({lane:0},'MISS');assert(!failed);
-const note={lane:0};context.judge(note,'PERFECT');context.judge(note,'PERFECT');assert.equal(bursts,1);assert.equal(context.state.health,0);
+const note={lane:0};context.judge(note,'PERFECT');context.judge(note,'PERFECT');assert.equal(bursts,1);assert.equal(context.state.health,.2);
 const html=fs.readFileSync('public/index.html','utf8'),ids=[...html.matchAll(/id="([^"]+)"/g)].map(x=>x[1]);assert.equal(ids.length,new Set(ids).size);for(const m of app.matchAll(/\$\('([^']+)'\)/g))assert(ids.includes(m[1]),m[1]);assert(!html.includes('id="practice" type="checkbox" checked'));
 console.log('PASS: gameplay life loss, Practice exemption, hit animation trigger, duplicate hit protection and UI wiring.');
 
@@ -37,7 +37,7 @@ console.log('PASS: Perfect-only combos reset on Great, Good and Miss, and no str
 
 for(const [difficulty,misses] of Object.entries({easy:10,normal:10,hard:10,insane:10,impossible:10})){
  context.state.difficulty=difficulty;context.state.health=10;els.practice.checked=false;failed=false;
- for(let i=0;i<misses-1;i++){context.judge({lane:0},'MISS');context.judge({lane:0},'PERFECT');context.judge({lane:0},'GREAT');assert.equal(context.state.health,9-i,'Successful hits cannot replenish lives');assert(!failed,difficulty+' failed too soon');}
+ for(let i=0;i<misses-1;i++){context.judge({lane:0},'MISS');assert.equal(context.state.health,9-i,'Every miss consumes one life');assert(!failed,difficulty+' failed too soon');}
  context.judge({lane:0},'MISS');assert(failed,difficulty+' should fail at the configured miss total');
 }
 console.log('PASS: real judgement flow applies the selected difficulty life penalty.');
@@ -52,3 +52,5 @@ vm.runInContext(app.slice(app.indexOf('function handleGameKeydown('),app.indexOf
 let consumed=false;stopped.handleGameKeydown({key:'Enter',code:'Enter',target:{tagName:'SELECT'},preventDefault(){consumed=true;},stopPropagation(){}});
 assert(consumed&&results.open&&stopped.state.finished);assert(!stopped.state.paused&&!stopped.state.playing&&!stopped.state.practiceFrozen);
 console.log('PASS: focused-dropdown Enter reaches actual finish logic and opens results from menu-free practice freeze.');
+
+context.state.health=7;context.state.difficulty='normal';context.judge({lane:0},'PERFECT');context.judge({lane:0},'GREAT');assert.equal(context.state.health,7.3,'Real gameplay judgements replenish spent lives');

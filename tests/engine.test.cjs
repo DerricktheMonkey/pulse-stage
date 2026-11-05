@@ -22,7 +22,7 @@ const pitched=E.analyzeLegacy(melody,rate,'normal');
 assert(pitched.notes.length>=tones.length,'Find musical note attacks');
 assert(pitched.notes[0].lane<pitched.notes.at(-1).lane,'Ascending pitches move toward higher lanes');
 assert(pitched.notes.every(n=>tones.some((_,i)=>Math.abs(n.time-(.5+i*.6))<.06)||pitched.notes.some(h=>h.lane!==n.lane&&h.duration>0&&n.time>h.time&&n.time<h.time+h.duration)),'Match attacks, with free-lane taps during holds');
-let health=10;for(let i=0;i<10;i++)health=E.nextHealth(health,'MISS');assert.equal(health,0);for(const grade of ['PERFECT','GREAT','GOOD'])assert.equal(E.nextHealth(7,grade),7);
+let health=10;for(let i=0;i<10;i++)health=E.nextHealth(health,'MISS');assert.equal(health,0);assert.equal(E.nextHealth(7,'PERFECT'),7.2);assert.equal(E.nextHealth(7,'GREAT'),7.1);assert.equal(E.nextHealth(7,'GOOD'),7);
 console.log('PASS: pitched song scanning, pitch-to-lane mapping, wider hit window and life depletion/recovery.');
 
 assert.equal(E.judgement(.115),'PERFECT');assert.equal(E.judgement(.13),'GREAT');assert.equal(E.judgement(.17),'GOOD');const legacy=E.validateChart({notes:[{time:1,lane:0,kind:'slide',endLane:1,duration:.4}]},5);assert.equal(legacy[0].duration,.4);assert(!('kind' in legacy[0]));assert(!('endLane' in legacy[0]));
@@ -107,6 +107,8 @@ console.log('PASS: occasional two-note chords, short three-note bursts, cooldown
 
 for(const difficulty of ['easy','normal','hard','insane','impossible']){
  let health=10,misses=0;while(health>0){health=E.nextHealth(health,'MISS',difficulty);misses++;}
- assert.equal(misses,10);assert.equal(E.nextHealth(9,'PERFECT',difficulty),9);assert.equal(E.nextHealth(7,'GREAT',difficulty),7);assert.equal(E.nextHealth(3,'GOOD',difficulty),3);
+ assert.equal(misses,10);assert.equal(E.nextHealth(9,'PERFECT',difficulty),9.2);assert.equal(E.nextHealth(7,'GREAT',difficulty),7.1);assert.equal(E.nextHealth(3,'GOOD',difficulty),3);
 }
-console.log('PASS: ten lives on every difficulty, one life per missed note, no hit recovery and bounded lives.');
+console.log('PASS: ten lives on every difficulty, one life per missed note, Perfect/Great recovery and bounded lives.');
+
+for(const difficulty of ['easy','normal','hard','insane','impossible']){let lives=9;for(let i=0;i<5;i++)lives=E.nextHealth(lives,'PERFECT',difficulty);assert.equal(lives,10,'Five Perfects replenish one life');assert.equal(E.nextHealth(lives,'PERFECT',difficulty),10,'Recovery is capped at ten');lives=9;for(let i=0;i<10;i++)lives=E.nextHealth(lives,'GREAT',difficulty);assert.equal(lives,10,'Ten Greats replenish one life without floating-point drift');}

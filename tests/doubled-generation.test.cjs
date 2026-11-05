@@ -17,7 +17,7 @@ for(const difficulty of ['easy','normal','hard','insane','impossible']){
  for(const n of base.notes)assert(dense.notes.some(x=>x.time===n.time&&x.lane===n.lane&&x.duration===n.duration));E.validateChart(dense,16);
  assert.equal(dense.generation.targetNotes,base.notes.length*2);
 }
-assert.equal(E.MAX_LIFE,10);assert.equal(E.nextHealth(9,'PERFECT'),9);assert.equal(E.nextHealth(10,'MISS','impossible'),9);
+assert.equal(E.MAX_LIFE,10);assert.equal(E.nextHealth(9,'PERFECT'),9.2);assert.equal(E.nextHealth(10,'MISS','impossible'),9);
 console.log('PASS: double single-tap density across all five tiers, immutable holds/chords, silence safety, real-audio integration, ten-life solo cap and one-life miss penalty.');
 // Exercise the actual ten-life run and restart lifecycle.
 const fs=require('node:fs'),vm=require('node:vm'),app=fs.readFileSync('public/app.js','utf8'),state={notes:[],releaseUntil:[0,0,0,0],palette:['#fff']},feedback={style:{}};
