@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),E=require('../public/engine.js');
+const dt=.01,duration=22,notes=Array.from({length:80},(_,i)=>({time:.5+i*.25,lane:i%4,duration:0})),env=Array(duration/dt).fill(.2),sustain={energy:env.map(()=>0),flux:env.map(()=>0),pitch:env.map(()=>0),tonality:env.map(()=>0)};
+for(const start of [.5,9])for(let i=Math.round(start/dt);i<(start+1.2)/dt;i++){sustain.energy[i]=.3;sustain.pitch[i]=440;sustain.tonality[i]=.8;}for(const start of [.5,9])sustain.flux[Math.round(start/dt)]=.2;
+const peaks=Array.from({length:40},(_,i)=>({time:.5+i*.5,strength:i%8===0?2:1,frequency:440})),analysis={env,dt,sustain,peaks,musicEvents:[],percussion:[]},before=JSON.stringify(notes),out=E.musicAccents(notes,analysis);
+assert.equal(out.length,notes.length);assert.equal(JSON.stringify(notes),before,'Never mutate the source chart');E.validateChart({notes:out},duration);
+const held=out.filter(n=>n.duration>0);assert(held.length>0,'Include real sustained sounds when a lane has space');assert(held.length<=Math.floor(out.length*.03));assert(held.every(n=>n.duration>=.5&&n.duration<=1.8));for(let i=1;i<held.length;i++)assert(held[i].time-held[i-1].time-held[i-1].duration>=6,'Holds remain occasional');
+const groups=new Map();for(const n of out){if(!groups.has(n.time))groups.set(n.time,[]);groups.get(n.time).push(n);}const chords=[...groups].filter(([,g])=>g.length>1);assert(chords.length>0,'Add occasional two-note musical accents');assert(chords.length<=Math.floor(out.length*.025));for(const [time,group] of chords){assert.equal(group.length,2);assert(peaks.some(p=>p.strength===2&&p.time===time),'Accent only strong musical attacks');}
+assert(out.filter(n=>!n.duration&&groups.get(n.time).length===1).length>=out.length*.9,'Single taps remain the focus');
+const unsupported=E.musicAccents(notes,{env,dt,peaks:[],percussion:[],musicEvents:[]});assert.deepEqual(unsupported,notes,'No strong attacks or sustained voice means no manufactured variety');
+const staccato={...sustain,energy:sustain.energy.map(()=>0)};assert(E.musicAccents(notes,{...analysis,sustain:staccato}).every(n=>!n.duration),'Drums cannot become holds');
+console.log('PASS: occasional supported holds/two-note accents, unchanged totals, at least 90% ordinary taps, sustained-voice/lane safety, strength selection and no unsupported decoration.');
+// Dense Impossible still has occasional holds when the audio truly sustains.
+const sr=11025,audio=new Float32Array(sr*24);for(let phrase=0;phrase<10;phrase++){const start=.5+phrase*2.2;for(let i=0;i<1.8*sr;i++){const t=i/sr;audio[Math.floor(start*sr)+i]=.4*Math.sin(2*Math.PI*[330,440,660][phrase%3]*t)*Math.min(1,t/.01,(1.8-t)/.03);}}
+const dense=E.analyze(audio,sr,'impossible');assert(dense.notes.some(n=>n.duration>=.5),'Preserve sustained voices even in a dense chart');assert.equal(dense.notes.length,dense.generation.targetNotes);E.validateChart(dense,24);assert.equal(E.scrollTravel(dense.notes,.65,'impossible'),.65);

@@ -431,7 +431,7 @@ function analyzeLegacy(samples,rate,difficulty='normal',{densityMultiplier=2}={}
   if(spectralFlux[i]>mean*1.15)musicEvents.push({time:+(i*dt).toFixed(3),frequency:pitch[i],strength:spectralFlux[i]/maxSpectral*.45});
  }
  const originalCount=notes.length;if(densityMultiplier===2)notes=doubleGeneratedNotes(notes,{bpm,peaks,percussion,env,dt,duration:samples.length/rate},difficulty);
- return {notes,bpm,peaks,percussion,env,dt,musicEvents,scanVersion:17,generation:{baseNotes:originalCount,targetNotes:originalCount*densityMultiplier,addedTaps:notes.length-originalCount},density:{targetPerSecond:(DENSITY_RATES[difficulty]||2.6)*densityMultiplier,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?[...timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})),...notes.filter(n=>['triplet','sixteenth','double-time'].includes(n.fillSource)).map(n=>({time:n.time,type:n.fillSource}))]:[]};
+ return {notes,bpm,peaks,percussion,env,dt,musicEvents,sustain:{energy:melodicEnergy,flux:melodicFlux,pitch,tonality},scanVersion:17,generation:{baseNotes:originalCount,targetNotes:originalCount*densityMultiplier,addedTaps:notes.length-originalCount},density:{targetPerSecond:(DENSITY_RATES[difficulty]||2.6)*densityMultiplier,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?[...timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})),...notes.filter(n=>['triplet','sixteenth','double-time'].includes(n.fillSource)).map(n=>({time:n.time,type:n.fillSource}))]:[]};
 }
 // Keep the previous chart's count as a budget only. Its hold, chord, BPM-fill
 // and difficulty patterns do not supply any timing or lanes to the new chart.
@@ -481,10 +481,52 @@ function musicChart(analysis,target){
  }
  return mapped.sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
+// Use a few real sustained voices and strong accents as variety. All changes
+// reuse existing heads, so the chart's note budget never grows.
+function musicAccents(notes,analysis){
+ let out=notes.map(n=>({...n}));if(!out.length)return out;
+ const {sustain,dt,env=[]}=analysis,duration=env.length*dt,events=[...(analysis.peaks||[]),...(analysis.percussion||[]),...(analysis.musicEvents||[])].sort((a,b)=>a.time-b.time);
+ const nearby=(time,tolerance)=>{const i=noteIndex(events,time-tolerance);return i<events.length&&events[i].time<=time+tolerance;};
+ const groups=new Map();for(const n of out)groups.set(n.time,(groups.get(n.time)||0)+1);
+ if(sustain&&dt>0){
+  const held=impossibleHolds(out,[sustain],dt,duration);let count=0,end=-Infinity;const cap=Math.max(1,Math.floor(out.length*.03));
+  for(let i=0;i<out.length;i++){
+   const n=out[i];if(count>=cap||groups.get(n.time)!==1||n.time<end+6||!nearby(n.time,.04))continue;
+   // In a dense phrase, give a real sustained voice its own lane while the
+   // other melody heads retain their timing on the remaining fingers.
+   const candidate=held[i].duration>=.5?held[i]:impossibleHolds([{...n,duration:0}],[sustain],dt,Math.min(duration,n.time+1.8))[0];
+   if(candidate.duration<.5)continue;
+   let length=0;
+   for(const trial of [...new Set([+Math.min(1.8,candidate.duration).toFixed(3),+Math.min(.9,candidate.duration).toFixed(3),.5])]){
+    const edits=[];let fits=true;
+    for(const other of out){
+     if(other===n||other.lane!==n.lane||other.time<=n.time||other.time>=n.time+trial+.13)continue;
+     const lane=[(other.lane+2)%4,(other.lane+1)%4,(other.lane+3)%4].find(l=>out.every(m=>m===other||m.lane!==l||other.time>=m.time+Math.max(.035,m.duration)+.105||other.time+.14<=m.time));
+     if(lane===undefined){fits=false;break;}edits.push([other,other.lane]);other.lane=lane;
+    }
+    if(fits){length=trial;break;}for(const [other,lane] of edits)other.lane=lane;
+   }
+   if(!length)continue;n.duration=length;count++;end=n.time+n.duration;
+  }
+ }
+ const strengths=events.map(p=>p.strength||0).sort((a,b)=>a-b),threshold=strengths[Math.floor(strengths.length*.75)]||Infinity;
+ const records=out.map(n=>({time:n.time,n})),holds=out.filter(n=>n.duration),candidates=events.filter(p=>(p.strength||0)>=threshold).sort((a,b)=>(b.strength||0)-(a.strength||0)||a.time-b.time),used=[];
+ let chords=[...groups.values()].filter(n=>n>1).length;const cap=Math.floor(out.length*.025);
+ for(const event of candidates){
+  if(chords>=cap)break;
+  const at=noteIndex(records,event.time-.035),head=records[at]?.time<event.time+.035?records[at].n:null;if(!head||head.duration||groups.get(head.time)!==1||used.some(t=>Math.abs(t-head.time)<3)||holds.some(n=>n.time<head.time&&n.time+n.duration>head.time))continue;
+  const window=[];for(let i=noteIndex(records,head.time-.25);i<records.length&&records[i].time<=head.time+.25;i++)window.push(records[i].n);
+  const filler=window.filter(n=>!n.duration&&groups.get(n.time)===1&&Math.abs(n.time-head.time)>=.08&&Math.abs(n.time-head.time)<=.25&&!nearby(n.time,.03)).sort((a,b)=>Math.abs(a.time-head.time)-Math.abs(b.time-head.time))[0];if(!filler)continue;
+  const lane=[(head.lane+2)%4,(head.lane+3)%4,(head.lane+1)%4].find(l=>out.every(n=>n===filler||n.lane!==l||head.time>=n.time+Math.max(.035,n.duration)+.13||head.time+.16<=n.time));
+  if(lane===undefined)continue;
+  groups.delete(filler.time);filler.time=head.time;filler.lane=lane;groups.set(head.time,2);used.push(head.time);chords++;
+ }
+ return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
+}
 function analyze(samples,rate,difficulty='normal',options={}){
  const analysis=analyzeLegacy(samples,rate,difficulty,options),target=analysis.notes.length;
- const notes=musicChart(analysis,target);
- return {...analysis,notes,scanVersion:18,patternStyle:'music',generation:{targetNotes:target,actualNotes:notes.length},rhythmSubdivisions:[],density:{...analysis.density,actualPerSecond:notes.length/(samples.length/rate||1)}};
+ const notes=musicAccents(musicChart(analysis,target),analysis);
+ return {...analysis,notes,scanVersion:19,patternStyle:'music',generation:{targetNotes:target,actualNotes:notes.length},rhythmSubdivisions:[],density:{...analysis.density,actualPerSecond:notes.length/(samples.length/rate||1)}};
 }
 // Expand only after the original holds/chords have been finalized. Every new
 // head is a single tap outside the chord window; existing notes are immutable.
@@ -552,5 +594,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={MAX_LIFE:200,doubleGeneratedNotes,attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,musicChart,analyzeLegacy,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={MAX_LIFE:200,doubleGeneratedNotes,attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,musicChart,musicAccents,analyzeLegacy,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);
