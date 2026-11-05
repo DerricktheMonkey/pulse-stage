@@ -7,7 +7,7 @@ function harness(rate=1){
  const gradient={addColorStop(){}},g=new Proxy({createLinearGradient:()=>gradient},{get:(o,k)=>o[k]||(()=>{}),set:(o,k,v)=>(o[k]=v,true)});
  const c={state,E,$,g,w:1000,h:600,ctx:{currentTime:0},audibleContextTime:()=>0,practiceBeatDuration:()=>.5,songTime(){state.presentationClock.wall=wall;return seconds;},offset:()=>0,drawStageBackground(){},point:(lane,p)=>({x:lane*100,y:28+p*530}),quad(){},drawHoldCues(){},drawHitEffects(){},fmt:String,requestAnimationFrame(){},judge(n,grade){misses.push(grade);n.result=grade;},PulseNoteSprites:{prepare:()=>({head(g,lane,x,y){heads.push(y);},cap(g,lane,x,y){caps.push(y);}})}};
  vm.createContext(c);vm.runInContext(app.slice(app.indexOf('function render(now)'),app.indexOf('function laneFromEvent')),c);
- return {state,heads,caps,misses,draw(frame,delay,time){wall=frame+delay;seconds=time;c.render(frame);}};
+ return {state,heads,caps,misses,context:c,elements,draw(frame,delay,time){wall=frame+delay;seconds=time;c.render(frame);}};
 }
 let worstError=0;
 for(const hz of [60,120,144,240])for(const rate of [.5,1,2]){
@@ -25,3 +25,10 @@ const paused=harness();paused.state.playing=false;paused.state.paused=true;pause
 const rewind=harness();rewind.state.origin=0;rewind.state.rewindTarget=9.5;rewind.draw(100,4,9.5);assert.equal(rewind.heads.at(-1),frozen,'Rewind countdown never draws before its saved position');
 const judged=harness();judged.state.notes=[{time:9,lane:0,duration:0}];judged.draw(100,4,9+E.HIT_WINDOW+.001);assert.deepEqual(judged.misses,['MISS'],'Miss window uses audio time even when visual frame time is earlier');
 console.log('PASS: uniform note/hold movement at 60/120/144/240Hz and 0.5/1/2x with 0–4ms dispatch jitter, pause, rewind clamp, and unchanged audio-clock judgments; worst step error '+worstError.toExponential(2)+'px.');
+
+const ui=harness();ui.context.fmt=t=>String(Math.floor(t));let writes=0,transforms=0;
+for(const id of ['elapsed','feedback','countdown']){let text='';Object.defineProperty(ui.context.$(id),'textContent',{get:()=>text,set:v=>{writes++;text=v;}});}
+Object.defineProperty(ui.context.$('progressFill').style,'width',{set(){throw Error('Animation must not change layout width');}});
+Object.defineProperty(ui.context.$('progressFill').style,'transform',{set(){transforms++;}});
+ui.state.feedbackUntil=0;for(let i=0;i<180;i++)ui.draw(i*1000/180,0,9+i/180);
+assert(writes<=2,'Unchanged clock/countdown/feedback text is not recreated at display refresh rate');assert.equal(transforms,180,'Progress remains smooth through compositor transforms');

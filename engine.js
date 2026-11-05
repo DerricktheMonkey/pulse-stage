@@ -525,13 +525,10 @@ function doubleGeneratedNotes(notes,{peaks=[],percussion=[],env=[],dt,bpm=120,du
  }
  return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
-// Note heads occupy at most .082 of the lane height, plus a visible gap.
-// Speed changes travel distance only; chart timestamps never change.
+// The speed setting is shared by every difficulty and chart. Density and
+// same-lane spacing must never override the player's chosen travel time.
 function scrollTravel(notes,requested=1.8,difficulty='normal'){
- let travel=difficulty==='impossible'?Math.min(requested,.65):difficulty==='insane'?Math.min(requested,.8):requested;
- const ends=[null,null,null,null];
- for(const n of notes){const prev=ends[n.lane];if(prev){const gap=n.time-prev.time-(prev.duration||0);if(gap>0)travel=Math.min(travel,gap/(prev.duration>.05?.065:.1));}ends[n.lane]=n;}
- return Math.max(.05,travel);
+ return Number.isFinite(requested)&&requested>0?requested:1.8;
 }
 function missDamage(difficulty='normal'){return {easy:8,normal:12,hard:20,insane:34,impossible:50}[difficulty]||12;}
 function nextHealth(health,result,difficulty='normal',maxHealth=100){return Math.max(0,Math.min(maxHealth,health+(result==='MISS'?-missDamage(difficulty):result==='PERFECT'?2:result==='GREAT'?1:0)));}

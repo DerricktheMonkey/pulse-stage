@@ -22,5 +22,31 @@ function createCache(doc){
  }
  return {prepare};
 }
-const api={createCache};if(root.document)Object.assign(api,createCache(root.document));if(typeof module!=='undefined')module.exports=api;root.PulseNoteSprites=api;
+// Cache the original ring and particle glow before play. Blend adjacent
+// animation cells to retain smooth expansion without per-hit shadow passes.
+function createEffectCache(doc){
+ let signature='',atlases=new Map(),failed=false;
+ const frames=32,tile=192,columns=8,center=96;
+ function prepare(palette){
+  const next=[...new Set(palette)].join('|');if(next===signature)return !failed;
+  for(const atlas of atlases.values()){atlas.width=1;atlas.height=1;}atlases=new Map();signature=next;failed=false;
+  try{for(const color of new Set(palette))for(const particles of [0,10]){
+   const atlas=doc.createElement('canvas');atlas.width=tile*columns;atlas.height=tile*Math.ceil(frames/columns);const g=atlas.getContext('2d');if(!g)throw Error('No effect canvas');
+   for(let frame=0;frame<frames;frame++){
+    const p=frame/(frames-1),x=frame%columns*tile+center,y=Math.floor(frame/columns)*tile+center;
+    g.strokeStyle=color;g.fillStyle=color;g.lineWidth=3*(1-p)+1;g.shadowColor=color;g.shadowBlur=15;g.beginPath();g.ellipse(x,y,12+p*48,5+p*20,0,0,Math.PI*2);g.stroke();
+    for(let i=0;i<particles;i++){const angle=Math.PI*2*i/particles;g.fillRect(x+Math.cos(angle)*p*65,y+Math.sin(angle)*p*38-p*35,4*(1-p)+1,4*(1-p)+1);}
+   }
+   atlases.set(color+'|'+particles,atlas);
+  }}catch{for(const atlas of atlases.values()){atlas.width=1;atlas.height=1;}atlases=new Map();failed=true;}
+  return !failed;
+ }
+ function draw(g,e,p,x,y){
+  const atlas=atlases.get(e.color+'|'+e.particles);if(!atlas)return false;
+  const position=Math.max(0,Math.min(1,p))*(frames-1),lo=Math.floor(position),hi=Math.min(frames-1,lo+1),mix=position-lo;
+  g.save();const alpha=g.globalAlpha;for(const [frame,weight] of [[lo,1-mix],[hi,mix]])if(weight>0){g.globalAlpha=alpha*(1-p)*weight;g.drawImage(atlas,frame%columns*tile,Math.floor(frame/columns)*tile,tile,tile,x-center,y-center,tile,tile);}g.restore();return true;
+ }
+ return {prepare,draw};
+}
+const api={createCache,createEffectCache};if(root.document){Object.assign(api,createCache(root.document));api.effects=createEffectCache(root.document);}if(typeof module!=='undefined')module.exports=api;root.PulseNoteSprites=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

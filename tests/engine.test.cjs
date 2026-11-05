@@ -57,13 +57,12 @@ const hiss=new Float32Array(rate*4),vibrato=new Float32Array(rate*4);let vibrato
 for(let i=0;i<hiss.length;i++){seed=(Math.imul(seed,1664525)+1013904223)|0;hiss[i]=seed/2147483648*.4;const t=i/rate;if(t>.5&&t<3.5){vibratoPhase+=2*Math.PI*440*Math.pow(2,.025*Math.sin(2*Math.PI*6*t))/rate;vibrato[i]=.4*Math.sin(vibratoPhase);}}
 assert.equal(E.analyzeLegacy(hiss,rate,'insane').notes.length,0,'Broadband noise is not music');
 assert(E.analyzeLegacy(vibrato,rate,'insane').notes.length<=2,'Vibrato is not a rapid melodic run');
-// Spacing is guaranteed by travel speed, without moving note timestamps.
+// Travel time belongs to the player's setting, independent of chart density.
 for(const notes of [insane.notes,legatoChart.notes,mixChart.notes,[{time:1,lane:0,duration:.5},{time:1.535,lane:0,duration:0},{time:1.57,lane:0,duration:0}]]){
- const original=JSON.stringify(notes),travel=E.scrollTravel(notes,3,'insane'),ends=[null,null,null,null];
- for(const n of notes){const prev=ends[n.lane];if(prev){const gap=n.time-prev.time-(prev.duration||0);assert(gap/travel>=(prev.duration>.05?.065:.1)-1e-9,'Note heads/tails stay visually separate in each lane');}ends[n.lane]=n;}
- assert.equal(JSON.stringify(notes),original,'Changing scroll speed never changes rhythm');assert(travel<=.8);
+ const original=JSON.stringify(notes);for(const difficulty of ['easy','normal','hard','insane','impossible'])assert.equal(E.scrollTravel(notes,1.8,difficulty),1.8);
+ assert.equal(JSON.stringify(notes),original);
 }
-console.log('PASS: melody over bass/hi-hats, noise/vibrato rejection, visual spacing for taps/holds, unchanged audio timestamps.');
+console.log('PASS: music selection, noise rejection and player-controlled scroll speed across every difficulty.');
 
 // Polyphonic chords used to fail the isolated-pitch stability/concentration gate.
 const polyphonic=new Float32Array(rate*6),chordTimes=Array.from({length:32},(_,i)=>.5+i*.125);
