@@ -17,9 +17,9 @@ for(const difficulty of ['easy','normal','hard','insane','impossible']){
  for(const n of base.notes)assert(dense.notes.some(x=>x.time===n.time&&x.lane===n.lane&&x.duration===n.duration));E.validateChart(dense,16);
  assert.equal(dense.generation.targetNotes,base.notes.length*2);
 }
-assert.equal(E.MAX_LIFE,200);assert.equal(E.nextHealth(199,'PERFECT','normal',200),200);assert.equal(E.nextHealth(200,'MISS','impossible',200),150);
-console.log('PASS: double single-tap density across all five tiers, immutable holds/chords, silence safety, real-audio integration, doubled solo cap and unchanged miss damage.');
-// Exercise the actual run lifecycle: more starting life and recovery at the cap.
+assert.equal(E.MAX_LIFE,10);assert.equal(E.nextHealth(9,'PERFECT'),9);assert.equal(E.nextHealth(10,'MISS','impossible'),9);
+console.log('PASS: double single-tap density across all five tiers, immutable holds/chords, silence safety, real-audio integration, ten-life solo cap and one-life miss penalty.');
+// Exercise the actual ten-life run and restart lifecycle.
 const fs=require('node:fs'),vm=require('node:vm'),app=fs.readFileSync('public/app.js','utf8'),state={notes:[],releaseUntil:[0,0,0,0],palette:['#fff']},feedback={style:{}};
 let failures=0;const context={E,state,$:id=>id==='practice'?{checked:false}:feedback,performance:{now:()=>0},clearInput(){},updateHUD(){},burst(){},finish(){failures++;}};vm.createContext(context);vm.runInContext(app.slice(app.indexOf('function resetRun('),app.indexOf('function requestGameFullscreen('))+app.slice(app.indexOf('function judge('),app.indexOf('function press(')),context);
-context.resetRun();assert.equal(state.health,200);assert.equal(state.maxHealth,200);context.judge({lane:0},'PERFECT');assert.equal(state.health,200,'A hit never reduces the new life pool to the old cap');state.difficulty='impossible';for(let i=0;i<3;i++)context.judge({lane:0},'MISS');assert.equal(failures,0);assert.equal(state.health,50);context.judge({lane:0},'MISS');assert.equal(failures,1);context.resetRun(400);assert.equal(state.health,400);
+context.resetRun();assert.equal(state.health,10);assert.equal(state.maxHealth,10);context.judge({lane:0},'PERFECT');assert.equal(state.health,10);state.difficulty='impossible';for(let i=0;i<9;i++)context.judge({lane:0},'MISS');assert.equal(failures,0);assert.equal(state.health,1);context.judge({lane:0},'MISS');assert.equal(failures,1);context.resetRun();assert.equal(state.health,10);

@@ -1,10 +1,10 @@
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm'),E=require('../public/engine.js');
 const app=fs.readFileSync('public/app.js','utf8'),els={practice:{checked:false},feedback:{style:{}},perfectStatus:{dataset:{}},streakBreak:{classList:{add(){},remove(){}}}};let failed=false,bursts=0;
-const context={E,state:{judged:0,counts:{PERFECT:0,GREAT:0,GOOD:0,MISS:0},weight:0,combo:0,maxCombo:0,score:0,health:100,palette:['#fff']},$:id=>els[id],performance:{now:()=>0},burst:()=>bursts++,updateHUD:()=>{},finish:()=>failed=true};
+const context={E,state:{judged:0,counts:{PERFECT:0,GREAT:0,GOOD:0,MISS:0},weight:0,combo:0,maxCombo:0,score:0,health:10,palette:['#fff']},$:id=>els[id],performance:{now:()=>0},burst:()=>bursts++,updateHUD:()=>{},finish:()=>failed=true};
 vm.createContext(context);vm.runInContext(app.slice(app.indexOf('function judge('),app.indexOf('function press(')),context);
-for(let i=0;i<9;i++)context.judge({lane:0},'MISS');assert(failed);assert.equal(context.state.health,0);
-failed=false;els.practice.checked=true;context.state.health=12;context.judge({lane:0},'MISS');assert(!failed);
-const note={lane:0};context.judge(note,'PERFECT');context.judge(note,'PERFECT');assert.equal(bursts,1);assert.equal(context.state.health,2);
+for(let i=0;i<10;i++)context.judge({lane:0},'MISS');assert(failed);assert.equal(context.state.health,0);
+failed=false;els.practice.checked=true;context.state.health=1;context.judge({lane:0},'MISS');assert(!failed);
+const note={lane:0};context.judge(note,'PERFECT');context.judge(note,'PERFECT');assert.equal(bursts,1);assert.equal(context.state.health,0);
 const html=fs.readFileSync('public/index.html','utf8'),ids=[...html.matchAll(/id="([^"]+)"/g)].map(x=>x[1]);assert.equal(ids.length,new Set(ids).size);for(const m of app.matchAll(/\$\('([^']+)'\)/g))assert(ids.includes(m[1]),m[1]);assert(!html.includes('id="practice" type="checkbox" checked'));
 console.log('PASS: gameplay life loss, Practice exemption, hit animation trigger, duplicate hit protection and UI wiring.');
 
@@ -29,15 +29,15 @@ stopped.state.notes[0].result='MISS';assert(stopped.canCompleteRun(),'A fully ju
 console.log('PASS: Enter immediately after final tap or judged hold counts as complete while audio continues, awards earned S and saves bests; unjudged notes and active holds remain partial.');
 
 // Only consecutive Perfect judgements build combo.
-context.state.combo=0;context.state.maxCombo=0;context.state.runGrades=[];context.state.health=100;
+context.state.combo=0;context.state.maxCombo=0;context.state.runGrades=[];context.state.health=10;
 for(const [grade,combo] of [['PERFECT',1],['PERFECT',2],['GREAT',0],['PERFECT',1],['GOOD',0],['PERFECT',1],['MISS',0]]){context.judge({lane:0},grade);assert.equal(context.state.combo,combo);}
 assert.equal(context.state.maxCombo,2);assert.equal(context.state.runGrades.length,7);
 assert(!html.includes('id="streakBreak"'));assert(!app.includes('updatePerfectStreak'));
 console.log('PASS: Perfect-only combos reset on Great, Good and Miss, and no streak-break banner remains.');
 
-for(const [difficulty,misses] of Object.entries({easy:13,normal:9,hard:5,insane:3,impossible:2})){
- context.state.difficulty=difficulty;context.state.health=100;els.practice.checked=false;failed=false;
- for(let i=0;i<misses-1;i++){context.judge({lane:0},'MISS');assert(!failed,difficulty+' failed too soon');}
+for(const [difficulty,misses] of Object.entries({easy:10,normal:10,hard:10,insane:10,impossible:10})){
+ context.state.difficulty=difficulty;context.state.health=10;els.practice.checked=false;failed=false;
+ for(let i=0;i<misses-1;i++){context.judge({lane:0},'MISS');context.judge({lane:0},'PERFECT');context.judge({lane:0},'GREAT');assert.equal(context.state.health,9-i,'Successful hits cannot replenish lives');assert(!failed,difficulty+' failed too soon');}
  context.judge({lane:0},'MISS');assert(failed,difficulty+' should fail at the configured miss total');
 }
 console.log('PASS: real judgement flow applies the selected difficulty life penalty.');

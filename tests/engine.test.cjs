@@ -22,7 +22,7 @@ const pitched=E.analyzeLegacy(melody,rate,'normal');
 assert(pitched.notes.length>=tones.length,'Find musical note attacks');
 assert(pitched.notes[0].lane<pitched.notes.at(-1).lane,'Ascending pitches move toward higher lanes');
 assert(pitched.notes.every(n=>tones.some((_,i)=>Math.abs(n.time-(.5+i*.6))<.06)||pitched.notes.some(h=>h.lane!==n.lane&&h.duration>0&&n.time>h.time&&n.time<h.time+h.duration)),'Match attacks, with free-lane taps during holds');
-let health=100;for(let i=0;i<9;i++)health=E.nextHealth(health,'MISS');assert.equal(health,0);assert.equal(E.nextHealth(99,'PERFECT'),100);assert.equal(E.nextHealth(10,'PERFECT'),12);assert.equal(E.nextHealth(10,'GREAT'),11);assert.equal(E.nextHealth(10,'GOOD'),10);
+let health=10;for(let i=0;i<10;i++)health=E.nextHealth(health,'MISS');assert.equal(health,0);for(const grade of ['PERFECT','GREAT','GOOD'])assert.equal(E.nextHealth(7,grade),7);
 console.log('PASS: pitched song scanning, pitch-to-lane mapping, wider hit window and life depletion/recovery.');
 
 assert.equal(E.judgement(.115),'PERFECT');assert.equal(E.judgement(.13),'GREAT');assert.equal(E.judgement(.17),'GOOD');const legacy=E.validateChart({notes:[{time:1,lane:0,kind:'slide',endLane:1,duration:.4}]},5);assert.equal(legacy[0].duration,.4);assert(!('kind' in legacy[0]));assert(!('endLane' in legacy[0]));
@@ -105,8 +105,8 @@ for(const interval of [.065,.09,.125,.16,.25]){
 }
 console.log('PASS: occasional two-note chords, short three-note bursts, cooldowns, safe fastest streams and unchanged musical attack times.');
 
-for(const [difficulty,expected] of Object.entries({easy:13,normal:9,hard:5,insane:3,impossible:2})){
- let health=100,misses=0;while(health>0){health=E.nextHealth(health,'MISS',difficulty);misses++;}
- assert.equal(misses,expected);assert.equal(E.nextHealth(99,'PERFECT',difficulty),100);assert.equal(E.nextHealth(30,'GREAT',difficulty),31);assert.equal(E.nextHealth(30,'GOOD',difficulty),30);
+for(const difficulty of ['easy','normal','hard','insane','impossible']){
+ let health=10,misses=0;while(health>0){health=E.nextHealth(health,'MISS',difficulty);misses++;}
+ assert.equal(misses,10);assert.equal(E.nextHealth(9,'PERFECT',difficulty),9);assert.equal(E.nextHealth(7,'GREAT',difficulty),7);assert.equal(E.nextHealth(3,'GOOD',difficulty),3);
 }
-console.log('PASS: higher difficulty requires fewer misses to fail, bounded health and unchanged hit recovery.');
+console.log('PASS: ten lives on every difficulty, one life per missed note, no hit recovery and bounded lives.');
