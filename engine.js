@@ -527,8 +527,8 @@ function doubleGeneratedNotes(notes,{peaks=[],percussion=[],env=[],dt,bpm=120,du
 }
 // The speed setting is shared by every difficulty and chart. Density and
 // same-lane spacing must never override the player's chosen travel time.
-function scrollTravel(notes,requested=1.8,difficulty='normal'){
- return Number.isFinite(requested)&&requested>0?requested:1.8;
+function scrollTravel(notes,requested=.65,difficulty='normal'){
+ return Number.isFinite(requested)&&requested>0?requested:.65;
 }
 function missDamage(difficulty='normal'){return {easy:8,normal:12,hard:20,insane:34,impossible:50}[difficulty]||12;}
 function nextHealth(health,result,difficulty='normal',maxHealth=100){return Math.max(0,Math.min(maxHealth,health+(result==='MISS'?-missDamage(difficulty):result==='PERFECT'?2:result==='GREAT'?1:0)));}
