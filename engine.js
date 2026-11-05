@@ -541,13 +541,38 @@ function musicAccents(notes,analysis,difficulty='impossible'){
  }
  return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
+// Beginner follows one stable pitched line. Percussion, other voices and
+// density filler never supply heads to this chart.
+function beginnerMelody(analysis,samples,rate){
+ const {sustain:track,dt}=analysis;if(!track||!(dt>0))return [];
+ const size=track.pitch.length,maxEnergy=track.energy.reduce((a,b)=>Math.max(a,b),0),floor=Math.max(.0015,maxEnergy*.015),raw=[];
+ const voiced=i=>i>=0&&i<size&&track.energy[i]>floor&&track.tonality[i]>=.22&&track.pitch[i]>=110&&track.pitch[i]<=2200;
+ let current=null,bad=0;
+ const finish=()=>{if(current)raw.push(current);current=null;bad=0;};
+ for(let i=0;i<size;i++){
+  if(!voiced(i)){if(++bad*dt>.05)finish();continue;}
+  const pitches=[];for(let j=i-2;j<=i+2;j++)if(voiced(j))pitches.push(69+12*Math.log2(track.pitch[j]/440));pitches.sort((a,b)=>a-b);
+  const midi=Math.round(pitches[Math.floor(pitches.length/2)]),energy=track.energy[i],prior=(track.energy[i-1]||0)+(track.energy[i-2]||0)+(track.energy[i-3]||0),rise=track.flux[i]||0;
+  const reattack=current&&(i-current.start)*dt>=.15&&energy>prior/3*1.5&&rise>energy*.12&&rise>=(track.flux[i-1]||0)&&rise>(track.flux[i+1]||0);
+  if(current&&(midi!==current.midi||reattack))finish();
+  if(!current)current={start:i,end:i,midi,strength:energy/maxEnergy};else{current.end=i;current.strength=Math.max(current.strength,energy/maxEnergy);}bad=0;
+ }
+ finish();
+ // Brief semitone wobble inside an otherwise stable note is vibrato.
+ const segments=[];for(const segment of raw){segments.push(segment);while(segments.length>=3){const [a,b,c]=segments.slice(-3);if(a.midi!==c.midi||Math.abs(b.midi-a.midi)>1||(b.end-b.start+1)*dt>=.12||(c.start-a.end)*dt>.25)break;a.end=c.end;a.strength=Math.max(a.strength,b.strength,c.strength);segments.splice(-2);}}
+ const events=segments.filter(s=>(s.end-s.start+1)*dt>=.12).map(s=>({time:s.start*dt,end:Math.min(size*dt,(s.end+1)*dt),frequency:440*Math.pow(2,(s.midi-69)/12),strength:s.strength}));
+ const aligned=samples&&rate?alignAttacks(samples,rate,events):events,chosen=[];
+ for(const event of aligned){if(event.time<0||event.time>=size*dt||chosen.length&&event.time-chosen.at(-1).time<.7)continue;chosen.push(event);}
+ const frequencies=chosen.map(p=>p.frequency).sort((a,b)=>a-b),low=frequencies[0]||220,high=frequencies.at(-1)||880;
+ return chosen.map((event,i)=>{
+  const time=+event.time.toFixed(3),available=Math.min(event.end-.03,(chosen[i+1]?.time??size*dt)-.2)-time;
+  return {time,lane:Math.max(0,Math.min(3,Math.round(3*Math.log2(event.frequency/low)/Math.max(.5,Math.log2(high/low))))),duration:available>=.5?+available.toFixed(3):0};
+ });
+}
 function analyze(samples,rate,difficulty='normal',options={}){
  const beginner=difficulty==='beginner',analysis=analyzeLegacy(samples,rate,beginner?'easy':difficulty,beginner?{...options,densityMultiplier:1}:options);
- const target=beginner?Math.min(Math.round(samples.length/rate*.9),Math.ceil(analysis.notes.length*.6)):analysis.notes.length;
- let base=musicChart(analysis,target);
- if(beginner){const sparse=[];for(const n of base)if(!sparse.length||n.time-sparse.at(-1).time>=.7)sparse.push({...n,duration:0});base=sparse;}
- const notes=musicAccents(base,analysis,difficulty);
- return {...analysis,notes,scanVersion:21,patternStyle:'music',generation:{targetNotes:beginner?notes.length:target,actualNotes:notes.length},rhythmSubdivisions:[],density:{...analysis.density,targetPerSecond:beginner?.9:analysis.density.targetPerSecond,actualPerSecond:notes.length/(samples.length/rate||1)}};
+ const target=analysis.notes.length,notes=beginner?beginnerMelody(analysis,samples,rate):musicAccents(musicChart(analysis,target),analysis,difficulty);
+ return {...analysis,notes,scanVersion:22,patternStyle:beginner?'melody':'music',generation:{targetNotes:beginner?notes.length:target,actualNotes:notes.length},rhythmSubdivisions:[],density:{...analysis.density,targetPerSecond:beginner?.9:analysis.density.targetPerSecond,actualPerSecond:notes.length/(samples.length/rate||1)}};
 }
 // Give early notes their complete travel path after the initial countdown.
 function openingLead(notes,travel=.65,chartOffset=0){return Math.max(.05,Number(travel)||.65)+Math.max(0,-((notes[0]?.time||0)+(Number(chartOffset)||0)));}
@@ -618,5 +643,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={MAX_LIFE:10,doubleGeneratedNotes,attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,openingLead,MUSIC_VARIETY,musicChart,musicAccents,analyzeLegacy,analyze,validateChart,snapCloseNotes,judgement,nextHealth,lifeRecovery,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={MAX_LIFE:10,doubleGeneratedNotes,attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,openingLead,MUSIC_VARIETY,beginnerMelody,musicChart,musicAccents,analyzeLegacy,analyze,validateChart,snapCloseNotes,judgement,nextHealth,lifeRecovery,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);
