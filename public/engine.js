@@ -192,7 +192,7 @@ function impossibleHolds(notes,tracks,dt,duration){
 }
 // A shared head-count budget for each difficulty keeps different song lengths
 // comparable. Silence and a single sustained tone are not extra note sources.
-const DENSITY_RATES={easy:1.8,normal:2.6,hard:3.8,insane:7,impossible:9};
+const DENSITY_RATES={beginner:.9,easy:1.8,normal:2.6,hard:3.8,insane:7,impossible:9};
 // Drum transients need no settled pitch: kicks can sit below the melody bands,
 // while snares/hats are broadband. Compare local flux and reject release edges.
 function percussionAttacks(tracks,dt){
@@ -490,6 +490,7 @@ function musicChart(analysis,target){
 // Use a few real sustained voices and strong accents as variety. All changes
 // reuse existing heads, so the chart's note budget never grows.
 const MUSIC_VARIETY={
+ beginner:{holds:.12,sparseHolds:.20,holdGap:2,holdLength:2.5,chords:0,chordGap:3,recovery:.3,window:.2,singleInput:true},
  easy:{holds:.12,sparseHolds:.30,holdGap:1,holdLength:3.2,chords:.06,chordGap:2,recovery:.20,window:.4},
  normal:{holds:.09,sparseHolds:.20,holdGap:1.8,holdLength:2.8,chords:.08,chordGap:1.3,recovery:.18,window:.35},
  hard:{holds:.06,holdGap:2.5,holdLength:2.2,chords:.10,chordGap:.9,recovery:.17,window:.3},
@@ -507,7 +508,8 @@ function musicAccents(notes,analysis,difficulty='impossible'){
    const n=out[i];if(count>=cap||groups.get(n.time)!==1||n.time<end+settings.holdGap||!nearby(n.time,.04))continue;
    // In a dense phrase, give a real sustained voice its own lane while the
    // other melody heads retain their timing on the remaining fingers.
-   const candidate=impossibleHolds([{...n,duration:0}],tracks,dt,Math.min(duration,n.time+settings.holdLength))[0];
+   const limit=settings.singleInput?Math.min(settings.holdLength,(out[i+1]?.time??duration)-n.time-.2):settings.holdLength;
+   const candidate=impossibleHolds([{...n,duration:0}],tracks,dt,Math.min(duration,n.time+limit))[0];
    if(candidate.duration<.5)continue;
    let length=0;
    for(const trial of [...new Set([+Math.min(settings.holdLength,candidate.duration).toFixed(3),+Math.min(.9,candidate.duration).toFixed(3),.5])]){
@@ -540,10 +542,15 @@ function musicAccents(notes,analysis,difficulty='impossible'){
  return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
 function analyze(samples,rate,difficulty='normal',options={}){
- const analysis=analyzeLegacy(samples,rate,difficulty,options),target=analysis.notes.length;
- const notes=musicAccents(musicChart(analysis,target),analysis,difficulty);
- return {...analysis,notes,scanVersion:20,patternStyle:'music',generation:{targetNotes:target,actualNotes:notes.length},rhythmSubdivisions:[],density:{...analysis.density,actualPerSecond:notes.length/(samples.length/rate||1)}};
+ const beginner=difficulty==='beginner',analysis=analyzeLegacy(samples,rate,beginner?'easy':difficulty,beginner?{...options,densityMultiplier:1}:options);
+ const target=beginner?Math.min(Math.round(samples.length/rate*.9),Math.ceil(analysis.notes.length*.6)):analysis.notes.length;
+ let base=musicChart(analysis,target);
+ if(beginner){const sparse=[];for(const n of base)if(!sparse.length||n.time-sparse.at(-1).time>=.7)sparse.push({...n,duration:0});base=sparse;}
+ const notes=musicAccents(base,analysis,difficulty);
+ return {...analysis,notes,scanVersion:21,patternStyle:'music',generation:{targetNotes:beginner?notes.length:target,actualNotes:notes.length},rhythmSubdivisions:[],density:{...analysis.density,targetPerSecond:beginner?.9:analysis.density.targetPerSecond,actualPerSecond:notes.length/(samples.length/rate||1)}};
 }
+// Give early notes their complete travel path after the initial countdown.
+function openingLead(notes,travel=.65,chartOffset=0){return Math.max(.05,Number(travel)||.65)+Math.max(0,-((notes[0]?.time||0)+(Number(chartOffset)||0)));}
 // Expand only after the original holds/chords have been finalized. Every new
 // head is a single tap outside the chord window; existing notes are immutable.
 function doubleGeneratedNotes(notes,{peaks=[],percussion=[],env=[],dt,bpm=120,duration=0}={},difficulty='normal'){
@@ -611,5 +618,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={MAX_LIFE:10,doubleGeneratedNotes,attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,MUSIC_VARIETY,musicChart,musicAccents,analyzeLegacy,analyze,validateChart,snapCloseNotes,judgement,nextHealth,lifeRecovery,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={MAX_LIFE:10,doubleGeneratedNotes,attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,openingLead,MUSIC_VARIETY,musicChart,musicAccents,analyzeLegacy,analyze,validateChart,snapCloseNotes,judgement,nextHealth,lifeRecovery,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

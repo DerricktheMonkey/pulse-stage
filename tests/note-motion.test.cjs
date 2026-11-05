@@ -32,3 +32,16 @@ Object.defineProperty(ui.context.$('progressFill').style,'width',{set(){throw Er
 Object.defineProperty(ui.context.$('progressFill').style,'transform',{set(){transforms++;}});
 ui.state.feedbackUntil=0;for(let i=0;i<180;i++)ui.draw(i*1000/180,0,9+i/180);
 assert(writes<=2,'Unchanged clock/countdown/feedback text is not recreated at display refresh rate');assert.equal(transforms,180,'Progress remains smooth through compositor transforms');
+// Fresh runs keep notes hidden through 3-2-1, then let every early head enter
+// at the top before the music reaches its judgement time, including offsets.
+for(const hz of [60,120,144,240])for(const rate of [.5,1,2])for(const chartOffset of [0,-.6,.2]){
+ const intro=harness(rate),travel=.65;intro.state.notes=[{time:.05,lane:0,duration:0}];intro.state.noteTravel=travel;intro.context.offset=()=>chartOffset;intro.state.openingLead=E.openingLead(intro.state.notes,travel,chartOffset);intro.state.openingCount=3;
+ const initial=-3*rate-intro.state.openingLead;let first;
+ for(let i=0;i<Math.ceil((3+intro.state.openingLead/rate)*hz);i++){
+  const wall=i*1000/hz,time=initial+wall/1000*rate;intro.draw(wall,0,time);
+  if(wall<3000-1e-6)assert.equal(intro.heads.length,0,'No notes during the initial countdown');
+  if(intro.heads.length&&first===undefined)first=intro.heads.at(-1);
+ }
+ assert(first!==undefined,'The early note enters before its scheduled hit');assert(first>=28-1e-8&&first<=28+530*rate/travel/hz+1e-7,'First visible head starts at the top without a middle-lane pop');
+}
+console.log('PASS: complete opening travel after countdown, all refresh/training rates and positive/negative offsets.');
