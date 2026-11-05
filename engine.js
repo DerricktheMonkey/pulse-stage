@@ -321,7 +321,7 @@ function snapCloseNotes(notes){
  }
  return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
-function analyze(samples,rate,difficulty='normal'){
+function analyze(samples,rate,difficulty='normal',{densityMultiplier=2}={}){
  const impossible=difficulty==='impossible',insane=difficulty==='insane'||impossible,hop=insane?128:256,env=[];for(let i=0;i<samples.length;i+=hop){let e=0;for(let j=i;j<Math.min(i+hop,samples.length);j++)e+=samples[j]*samples[j];env.push(Math.sqrt(e/hop));}
  const dt=hop/rate,energyFlux=env.map((e,i)=>Math.max(0,e-(env[i-1]||0))),spectralFlux=[],pitch=[],melodicFlux=[],tonality=[],melodicEnergy=[],bands=impossible?Array.from({length:4},()=>({flux:[],energy:[],pitch:[],tonality:[]})):[],drums=impossible?Array.from({length:3},()=>({flux:[],energy:[],tonality:[]})):[];let prev=new Float64Array(512);
  for(let frame=0;frame<env.length;frame++){
@@ -425,7 +425,47 @@ function analyze(samples,rate,difficulty='normal'){
  notes=snapCloseNotes(notes);
  const percussion=impossible?percussionAttacks(drums,dt):[];
  if(impossible)notes=fillImpossibleGaps(notes,{bpm,peaks,percussion,env,dt,duration:samples.length/rate});
- return {notes,bpm,peaks,percussion,env,dt,scanVersion:16,density:{targetPerSecond:DENSITY_RATES[difficulty]||2.6,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?[...timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})),...notes.filter(n=>['triplet','sixteenth','double-time'].includes(n.fillSource)).map(n=>({time:n.time,type:n.fillSource}))]:[]};
+ const originalCount=notes.length;if(densityMultiplier===2)notes=doubleGeneratedNotes(notes,{bpm,peaks,percussion,env,dt,duration:samples.length/rate},difficulty);
+ return {notes,bpm,peaks,percussion,env,dt,scanVersion:17,generation:{baseNotes:originalCount,targetNotes:originalCount*densityMultiplier,addedTaps:notes.length-originalCount},density:{targetPerSecond:(DENSITY_RATES[difficulty]||2.6)*densityMultiplier,actualPerSecond:notes.length/(samples.length/rate||1)},rhythmSubdivisions:impossible?[...timed.filter(p=>p.subdivision).map(p=>({time:p.time,type:p.subdivision})),...notes.filter(n=>['triplet','sixteenth','double-time'].includes(n.fillSource)).map(n=>({time:n.time,type:n.fillSource}))]:[]};
+}
+// Expand only after the original holds/chords have been finalized. Every new
+// head is a single tap outside the chord window; existing notes are immutable.
+function doubleGeneratedNotes(notes,{peaks=[],percussion=[],env=[],dt,bpm=120,duration=0}={},difficulty='normal'){
+ const out=notes.map(n=>({...n})),target=Math.min(30000,notes.length*2);
+ if(!notes.length||!(dt>0)||!env.length)return out;
+ const index=(list,time,get=n=>n.time)=>{let lo=0,hi=list.length;while(lo<hi){const mid=(lo+hi)>>>1;if(get(list[mid])<time)lo=mid+1;else hi=mid;}return lo;};
+ const heads=out.map(n=>n.time).sort((a,b)=>a-b),lanes=Array.from({length:4},(_,lane)=>out.filter(n=>n.lane===lane).sort((a,b)=>a.time-b.time));
+ const recovery={easy:.14,normal:.12,hard:.10,insane:.085,impossible:.075}[difficulty]||.12;
+ const ceiling=env.reduce((a,b)=>Math.max(a,b),0),floor=Math.max(.003,ceiling*.02),beat=60/Math.max(40,Math.min(240,bpm));
+ const audible=time=>{const i=Math.floor(time/dt);return time>=.35&&time<duration-.03&&(env[i]||0)>floor;};
+ const free=(lane,time)=>{const list=lanes[lane],i=index(list,time),a=list[i-1],b=list[i];return (!a||time>=a.time+Math.max(.035,a.duration||0)+recovery)&&(!b||time+recovery<=b.time);};
+ function add(time,preferred=0){
+  time=+time.toFixed(3);if(!audible(time)||out.length>=target)return;
+  const i=index(heads,time,n=>n);if(i&&time-heads[i-1]<=CHORD_WINDOW+.002||i<heads.length&&heads[i]-time<=CHORD_WINDOW+.002)return;
+  const choices=[0,1,2,3].filter(l=>free(l,time));
+  // Rotate hands and give the busiest finger recovery time.
+  choices.sort((a,b)=>{const score=l=>{const list=lanes[l],j=index(list,time),previous=list[j-1];return (previous?previous.time:-10)+(l===preferred?-.025:0);};return score(a)-score(b);});
+  const lane=choices[0];if(lane===undefined)return;
+  const n={time,lane,duration:0};lanes[lane].splice(index(lanes[lane],time),0,n);heads.splice(i,0,time);out.push(n);
+ }
+ // Spread selections across phrases rather than spending the quota at the start.
+ function distribute(pool){const groups=new Map();for(const p of pool){const key=Math.floor(p.time/4);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);}for(const list of groups.values())list.sort((a,b)=>(b.strength||0)-(a.strength||0)||a.time-b.time);for(let i=0,remaining=true;remaining&&out.length<target;i++){remaining=false;for(const list of groups.values())if(i<list.length){remaining=true;add(list[i].time,list[i].lane);}}}
+ distribute([...peaks,...percussion]);
+ // Extra rhythmic subdivisions are supported only inside active musical phrases.
+ // A lone held tone or silent section cannot become a generated stream.
+ const events=peaks.map(p=>p.time).sort((a,b)=>a-b),anchor=peaks.reduce((a,b)=>(b.strength||0)>(a.strength||0)?b:a,peaks[0]||{time:0}).time;
+ for(const division of [2,4,3,6,8]){
+  const step=beat/division;if(step<=CHORD_WINDOW+.002)continue;
+  const pool=[];for(let t=anchor+Math.ceil((.35-anchor)/step)*step;t<duration;t+=step){
+   const left=index(events,t-beat*2,n=>n),right=index(events,t+beat*2,n=>n);if(right-left<4||!audible(t))continue;
+   // Require surrounding activity, not just a transient's fading release.
+   const i=Math.floor(t/dt),radius=Math.max(1,Math.floor(Math.min(.08,step*.4)/dt));
+   if((env[i-radius]||0)<=floor||(env[i+radius]||0)<=floor)continue;
+   pool.push({time:t,strength:env[i]||0});
+  }
+  distribute(pool);if(out.length>=target)break;
+ }
+ return out.sort((a,b)=>a.time-b.time||a.lane-b.lane);
 }
 // Note heads occupy at most .082 of the lane height, plus a visible gap.
 // Speed changes travel distance only; chart timestamps never change.
@@ -436,7 +476,7 @@ function scrollTravel(notes,requested=1.8,difficulty='normal'){
  return Math.max(.05,travel);
 }
 function missDamage(difficulty='normal'){return {easy:8,normal:12,hard:20,insane:34,impossible:50}[difficulty]||12;}
-function nextHealth(health,result,difficulty='normal'){return Math.max(0,Math.min(100,health+(result==='MISS'?-missDamage(difficulty):result==='PERFECT'?2:result==='GREAT'?1:0)));}
+function nextHealth(health,result,difficulty='normal',maxHealth=100){return Math.max(0,Math.min(maxHealth,health+(result==='MISS'?-missDamage(difficulty):result==='PERFECT'?2:result==='GREAT'?1:0)));}
 function validateChart(data,duration,{snap=true}={}){if(!data||!Array.isArray(data.notes)||data.notes.length>30000)throw Error('Choose a chart JSON containing a notes array (up to 30,000 notes).');const notes=data.notes.map(n=>{if(!Number.isFinite(n.time)||n.time<0||n.time>duration||!Number.isInteger(n.lane)||n.lane<0||n.lane>3||!Number.isFinite(n.duration??0)||(n.duration??0)<0||n.time+(n.duration??0)>duration+.01)throw Error('Notes need a valid time, lane 0–3, and duration within the song.');const out={time:n.time,lane:n.lane,duration:n.duration||0};if(n.softChord===true)out.softChord=true;return out;}).sort((a,b)=>a.time-b.time||a.lane-b.lane);const ends=[-1,-1,-1,-1];for(const n of notes){const lanes=[n.lane];if(lanes.some(l=>n.time<ends[l]-.001))throw Error('Notes cannot overlap in the same lane.');for(const l of lanes)ends[l]=n.time+Math.max(.035,n.duration);}return snap?snapCloseNotes(notes):notes;}
 // All simultaneous chart notes, including snapped heads, share chord glow.
 function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;start<notes.length;){let end=start+1;while(end<notes.length&&Math.abs(notes[end].time-notes[start].time)<=.001)end++;if(new Set(notes.slice(start,end).map(n=>n.lane)).size>1)for(let i=start;i<end;i++)notes[i].chord=true;start=end;}return notes;}
@@ -457,5 +497,5 @@ function nextPlayable(notes,lane,time,start=0){
  return best;
 }
 function judgement(delta){delta=Math.abs(delta);return delta<=.12?'PERFECT':delta<=.155?'GREAT':delta<=HIT_WINDOW?'GOOD':null;}
-const api={attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
+const api={MAX_LIFE:200,doubleGeneratedNotes,attackLookup,noteIndex,pendingIndex,nextPlayable,missDamage,busiestAttacks,slowRhythm,impossiblePatterns,impossibleHolds,balanceDensity,fillImpossibleGaps,percussionAttacks,DENSITY_RATES,insanePatterns,alignAttacks,spreadLanes,scrollTravel,analyze,validateChart,snapCloseNotes,judgement,nextHealth,HIT_WINDOW,CHORD_WINDOW,simultaneousHeads,markChords,rank,holdCue};if(typeof module!=='undefined')module.exports=api;root.RhythmEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

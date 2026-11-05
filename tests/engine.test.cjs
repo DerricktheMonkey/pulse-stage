@@ -1,5 +1,8 @@
 const assert=require('node:assert/strict');
-const E=require('../public/engine.js');
+// Verify the original musical selection independently; doubled defaults are
+// covered by doubled-generation.test.cjs, including exact hold/chord preservation.
+const Engine=require('../public/engine.js');
+const E={...Engine,analyze:(samples,rate,difficulty)=>Engine.analyze(samples,rate,difficulty,{densityMultiplier:1})};
 const rate=11025,samples=new Float32Array(rate*12);
 for(let beat=1;beat<24;beat++){let start=Math.floor(beat*.5*rate);for(let i=0;i<500;i++)samples[start+i]=Math.sin(i*.14)*Math.exp(-i/100);}
 for(const difficulty of ['easy','normal','hard']){

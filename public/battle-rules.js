@@ -1,5 +1,5 @@
 (function(root){'use strict';
-const MAX_LIFE=200;
+const MAX_LIFE=400;
 const GRADES={PERFECT:1,GREAT:.8,GOOD:.5,MISS:0};
 function options(songs,used=[],random=Math.random){const unique=[...new Map(songs.filter(s=>s?.id&&s.noteCount>0).map(s=>[s.id,s])).values()];if(unique.length<4)throw Error('Battle Mode needs at least four published charts in the Community library.');let pool=unique.filter(s=>!used.includes(s.id));if(pool.length<4)pool=unique;for(let i=pool.length-1;i>0;i--){const j=Math.min(i,Math.floor(random()*(i+1)));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.slice(0,4);}
 function choose(offered,votes,random=Math.random){if(votes.length!==2||votes.some(id=>!offered.some(s=>s.id===id)))throw Error('Both players must pick one of the four offered charts.');return votes[0]===votes[1]?votes[0]:votes[Math.min(1,Math.floor(random()*2))];}
