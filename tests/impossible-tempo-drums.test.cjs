@@ -18,8 +18,8 @@ const rate=11025,duration=10,mix=new Float32Array(rate*duration),kicks=[.7,1.2,2
 for(let i=0;i<mix.length;i++)mix[i]=.35*Math.sin(2*Math.PI*440*i/rate);
 for(const start of kicks)for(let k=0;k<.15*rate;k++){const t=k/rate;mix[Math.floor(start*rate)+k]+=.18*Math.sin(2*Math.PI*55*t)*Math.min(1,t/.002)*Math.exp(-t*35);}
 for(const start of snares)for(let k=0;k<.065*rate;k++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const t=k/rate;mix[Math.floor(start*rate)+k]+=.16*(seed/4294967296*2-1)*Math.min(1,t/.001)*Math.exp(-t*45);}
-const chart=E.analyze(mix,rate,'impossible');
+const chart=E.analyzeLegacy(mix,rate,'impossible');
 for(const hits of [kicks,snares]){const covered=hits.filter(t=>chart.percussion.some(p=>Math.abs(p.time-t)<.035));assert(covered.length/hits.length>=.85,'Detect masked kick/snare transients at their actual attack times');}
 const missedByMelody=[...kicks,...snares].filter(t=>!chart.peaks.some(p=>Math.abs(p.time-t)<.04));assert(missedByMelody.length>=3,'Fixture exercises hits the melody detector misses');assert(missedByMelody.filter(t=>chart.notes.some(n=>Math.abs(n.time-t)<.05)).length/missedByMelody.length>=.8,'Missed melodic-detector hits become playable drum notes');E.validateChart(chart,duration);
-const noise=new Float32Array(rate*3);for(let i=0;i<noise.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;noise[i]=(seed/4294967296*2-1)*.04;}assert.equal(E.analyze(noise,rate,'impossible').notes.length,0,'Steady broadband noise does not create a percussion chart');
+const noise=new Float32Array(rate*3);for(let i=0;i<noise.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;noise[i]=(seed/4294967296*2-1)*.04;}assert.equal(E.analyzeLegacy(noise,rate,'impossible').notes.length,0,'Steady broadband noise does not create a percussion chart');
 console.log('PASS: 60/75/90/110 BPM challenge, double-time/triplet phrases, exact note preservation, no chord inflation, idempotence, high-density drum recovery, masked 55Hz kicks/broadband snares and steady-noise rejection.');

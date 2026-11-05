@@ -12,7 +12,7 @@ for(const difficulty of ['easy','normal','hard','insane','impossible']){
 // Compare complete real-audio generation to the original pipeline, not just the helper.
 const rate=11025,audio=new Float32Array(rate*16);for(let i=0;i<audio.length;i++){const t=i/rate;if(t<.5||t>15.5)continue;const p=(t-.5)%.25,hz=[220,330,440,660][Math.floor((t-.5)/.25)%4];audio[i]=.3*Math.sin(2*Math.PI*hz*t)*(.5+.5*Math.exp(-p*35));}
 for(const difficulty of ['easy','normal','hard','insane','impossible']){
- const base=E.analyze(audio,rate,difficulty,{densityMultiplier:1}),dense=E.analyze(audio,rate,difficulty);console.log(difficulty,base.notes.length,'→',dense.notes.length);
+ const base=E.analyzeLegacy(audio,rate,difficulty,{densityMultiplier:1}),dense=E.analyzeLegacy(audio,rate,difficulty);console.log(difficulty,base.notes.length,'→',dense.notes.length);
  assert(dense.notes.length>=base.notes.length*1.85,'Near double on active music for '+difficulty);assert(dense.notes.length<=base.notes.length*2);
  for(const n of base.notes)assert(dense.notes.some(x=>x.time===n.time&&x.lane===n.lane&&x.duration===n.duration));E.validateChart(dense,16);
  assert.equal(dense.generation.targetNotes,base.notes.length*2);

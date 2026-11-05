@@ -18,5 +18,5 @@ const veryLong=E.impossibleHolds([{time:.5,lane:0,duration:0}],[voice(9)],dt,10)
 const silence={energy:Array(1000).fill(0),pitch:Array(1000).fill(0),tonality:Array(1000).fill(0),flux:Array(1000).fill(0)};assert.deepEqual(E.impossibleHolds(notes,[silence],dt,10),notes,'Silence adds neither holds nor filler');
 // Exercise the full analyzer using a long audible sustained tone.
 const rate=11025,samples=new Float32Array(rate*5);for(let i=Math.floor(.5*rate);i<4.2*rate;i++){const t=i/rate;samples[i]=.4*Math.sin(2*Math.PI*440*t)*Math.min(1,(t-.5)/.01,(4.2-t)/.02);}
-const chart=E.analyze(samples,rate,'impossible');assert(chart.notes.some(n=>n.duration>2),'Full scanning creates long holds from sparse sustained audio');assert(chart.notes.length<5,'A lone sustained tone does not spawn filler melodies');E.validateChart(chart,5);
+const chart=E.analyzeLegacy(samples,rate,'impossible');assert(chart.notes.some(n=>n.duration>2),'Full scanning creates long holds from sparse sustained audio');assert(chart.notes.length<5,'A lone sustained tone does not spawn filler melodies');E.validateChart(chart,5);
 console.log('PASS: multi-second sparse holds, unchanged concurrent melody heads/lanes, same-lane release safety, silence/pitch/reattack boundaries, six-second cap, and real-audio scanning without hold filler.');
