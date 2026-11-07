@@ -1,0 +1,58 @@
+name: Beatmap Studio checks
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/**'
+      - '*.js'
+      - '*.css'
+      - 'index.html'
+      - 'tests/**'
+      - 'scripts/studio-browser.mjs'
+      - '.github/workflows/studio-checks.yml'
+  pull_request:
+    paths:
+      - 'public/**'
+      - '*.js'
+      - '*.css'
+      - 'index.html'
+      - 'tests/**'
+      - 'scripts/studio-browser.mjs'
+      - '.github/workflows/studio-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check root and public asset parity
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFile,readdir} from 'node:fs/promises';
+          for(const name of await readdir('public')){if(!/\.(js|css|html)$/.test(name))continue;const a=await readFile(name),b=await readFile('public/'+name);if(!a.equals(b))throw Error('Out-of-sync deployment asset: '+name);}
+          NODE
+      - name: Build and unit regressions
+        run: |
+          npm run build
+          npm test
+      - name: Prepare browser checks
+        run: |
+          npm install --no-save --package-lock=false playwright
+          if ! command -v google-chrome && ! command -v chromium; then npx playwright install --with-deps chromium; fi
+      - name: Browser authoring, saves, playtest, and mobile
+        run: |
+          node scripts/studio-browser.mjs
+          cp .repair-results/browser.json .repair-results/browser-public.json
+          STUDIO_ROOT=. node scripts/studio-browser.mjs
+          cp .repair-results/browser.json .repair-results/browser-root.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: beatmap-studio-browser-results
+          path: .repair-results

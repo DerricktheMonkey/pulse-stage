@@ -1,0 +1,21 @@
+{
+  "version": "Beatmap Studio 2 / assets 110 / analyzer 25",
+  "verifiedSource": "fa9688256914b8664df7f4594f893c9dcdda8bc2",
+  "workflowRun": "https://github.com/DerricktheMonkey/pulse-stage/actions/runs/42344484390",
+  "build": "passed",
+  "unitTests": {"passed": 62, "failed": 0, "skipped": 0},
+  "browser": {
+    "rootAssets": "passed",
+    "publicAssets": "passed",
+    "uncaughtErrors": [],
+    "checks": ["vertical editor is primary", "tap placement and drag holds", "move notes and resize hold tails", "chords and undo/redo", "multi-select/copy/paste and collision rejection", "exact JSON round trip with BPM/first beat", "local save/reload/reopen", "actual unranked playtest returns to exact draft", "mobile layout without horizontal overflow"]
+  },
+  "generation": {
+    "syntheticFixtureSeconds": 12,
+    "noteCounts": {"easy": 22, "normal": 66, "hard": 82, "insane": 149, "impossible": 153},
+    "normalThroughImpossibleMatchPreOverhaulBudgets": true,
+    "silenceAndMusicalTimingRegressions": "passed",
+    "scrollSpeedLivesAndRecovery": "unchanged"
+  },
+  "limits": ["Synthetic audio and regression fixtures are not a subjective playability review of every song", "Online upload authentication and storage continue to use the existing backend configuration"]
+}

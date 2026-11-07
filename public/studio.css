@@ -1,0 +1,59 @@
+/* Beatmap Studio 2: composition is the main workspace, not a recorder panel. */
+.creation-mode main{max-width:1660px}
+.creation-mode .workspace{grid-template-columns:220px minmax(0,1fr);align-items:start}
+.creation-mode .workspace>.settings{display:none}
+.creation-mode .stage-panel{min-width:0;overflow:hidden}
+.creation-mode .stage-top{display:none}
+.creation-mode #editorView{padding:22px;overflow:visible}
+.studio-heading{display:flex;justify-content:space-between;align-items:start;gap:18px;margin-bottom:18px}
+.studio-heading h2{font-size:clamp(26px,3vw,38px);letter-spacing:-1px;margin:5px 0;color:#f1edff}
+.studio-heading p{color:#a0a9c4;margin:0;font-size:13px}
+.studio-heading .eyebrow{color:#ac9dff;font-size:10px;letter-spacing:2px}
+.studio-heading-actions{display:flex;flex-wrap:wrap;justify-content:end;gap:6px;max-width:370px}
+.studio-heading-actions button{font-size:11px;padding:9px 12px}
+.studio-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:7px;padding:12px;margin-bottom:14px;border:1px solid #35324e;border-radius:12px;background:#191a2b}
+.studio-toolbar label,.studio-inspector label{display:grid;gap:5px;font-size:10px;letter-spacing:.4px;color:#aab1c8;font-weight:600}
+.studio-toolbar select,.studio-inspector input,.studio-inspector select,.studio-transport select{min-height:33px;border:1px solid #3d405a;border-radius:6px;background:#101322;color:#ebe9ff;padding:6px 8px;min-width:0;width:100%}
+.studio-toolbar button{font-size:11px;padding:8px 10px;min-height:33px}
+.studio-main{display:grid;grid-template-columns:minmax(260px,1fr) 236px;gap:16px}
+.studio-grid-panel{min-width:0;border:1px solid #30364e;border-radius:12px;background:#0b1020;overflow:hidden}
+.studio-grid-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#8d99b8;font-size:10px;padding:12px 14px;border-bottom:1px solid #30364e}
+.studio-grid-caption strong{color:#d6d8ef;font-size:11px;letter-spacing:3px}
+.studio-grid-caption #editorNoteCount{color:#c3b6ff;white-space:nowrap}
+.creation-mode #timeline{display:block;box-sizing:border-box;width:100%;height:62vh;min-height:440px;max-height:720px;border:0;border-radius:0;margin:0;touch-action:none;cursor:crosshair;box-shadow:none;background:#0b1020}
+.creation-mode #timeline:focus-visible{outline:2px solid #bcaaff;outline-offset:-2px}
+.studio-overview-label{display:flex;justify-content:space-between;padding:10px 12px 4px;font-size:9px;letter-spacing:1.5px;color:#9eabc5}
+#studioOverview{display:block;height:48px;width:calc(100% - 24px);margin:4px 12px 8px;cursor:pointer;border-radius:5px}
+.studio-scroll{display:flex;align-items:center;gap:12px;padding:0 12px;color:#8997b8;font-size:10px}
+.studio-scroll #editorPosition{flex:1;min-width:0}
+.studio-shortcuts{font-size:10px;line-height:1.7;color:#7e8caa;padding:5px 12px 12px;margin:0}
+.studio-inspector{display:flex;flex-direction:column;gap:10px;padding:15px;background:#151827;border:1px solid #30364e;border-radius:12px;align-self:start;min-width:0}
+.studio-inspector h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#e0ddf5;margin:3px 0}
+.studio-inspector h3 small{display:block;font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:#9a9bb1;margin-top:5px}
+.studio-inspector hr{height:1px;border:0;background:#30364e;width:100%;margin:5px 0}
+.studio-inspector .micro{font-size:10px;line-height:1.6;margin:0;color:#8e99b4}
+.studio-note-buttons,.studio-save{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.studio-note-buttons button,.studio-save button,.studio-save .file-label{font-size:10px;padding:8px 6px;text-align:center;min-width:0}
+.studio-note-buttons #applyNote{grid-column:1/-1}
+.studio-check{display:flex!important;align-items:center;gap:8px;font-size:11px!important;letter-spacing:0!important}
+.studio-check input{width:14px!important;min-height:0!important;height:14px;margin:0}
+.studio-transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;padding:13px;background:#1b1c30;border:1px solid #37364f;border-radius:11px}
+.studio-transport button{font-size:12px}
+.studio-transport label{display:flex;align-items:center;gap:8px;font-size:11px;color:#a4aec7}
+.studio-transport select{width:78px}
+.studio-transport #recordTime{position:static;color:#efe6ff;font:600 19px ui-monospace,monospace;min-width:98px;text-shadow:none;background:none;padding:0}
+.studio-transport #studioPlaytest{margin-left:auto}
+.studio-song-position{display:flex;align-items:center;gap:12px;padding:4px 8px;color:#98a4bf;font-size:11px}
+.studio-song-position #recordPosition{flex:1;min-width:0}
+.studio-song-position #recordPositionValue{white-space:nowrap}
+.studio-status{min-height:30px;padding:8px 2px}
+.studio-status #recordStatus{position:static;display:block;color:#beb5dd;font-size:12px;background:none;text-shadow:none;padding:0;pointer-events:auto}
+.studio-optional{padding:12px 14px;margin-top:12px;border:1px solid #30364e;border-radius:10px;background:#131827;font-size:12px;color:#9ea9c4}
+.studio-optional summary{cursor:pointer;font-weight:600;color:#c3cbe0}
+.studio-optional .record-scene{margin:15px 0;max-height:380px}
+.studio-optional #recordStart{margin:10px 10px 10px 0}
+.studio-range{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.studio-range label{display:grid;gap:4px;font-size:11px}
+#studioReturn{position:fixed;right:22px;bottom:85px;z-index:10000;padding:12px 20px;box-shadow:0 4px 24px #0009}
+@media(max-width:1100px){.creation-mode .workspace{grid-template-columns:170px minmax(0,1fr)}.studio-main{grid-template-columns:minmax(240px,1fr) 205px}.creation-mode #editorView{padding:14px}.studio-heading{flex-direction:column}.studio-heading-actions{max-width:none;justify-content:start}.studio-grid-caption>span:nth-child(2){display:none}}
+@media(max-width:800px){.creation-mode .workspace{display:block}.creation-mode .setup{margin-bottom:12px}.creation-mode #creationSetup{display:grid;grid-template-columns:1fr 1fr;gap:8px}.creation-mode #creationSetup .panel-title,.creation-mode #creationSetup .creation-hint{grid-column:1/-1}.studio-main{grid-template-columns:minmax(0,1fr)}.studio-inspector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.studio-inspector h3,.studio-inspector hr,.studio-inspector .micro,.studio-note-buttons,.studio-save,#editorSaveStatus{grid-column:1/-1}.creation-mode #timeline{height:60vh;min-height:400px;max-height:620px}.studio-transport #studioPlaytest{margin-left:0}.studio-toolbar label{flex:1;min-width:95px}.studio-heading-actions{gap:5px}.studio-heading-actions button{font-size:10px}.creation-mode #editorView{padding:10px}}
