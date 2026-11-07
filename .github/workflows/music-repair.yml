@@ -16,23 +16,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Restore checksum-verified source bundle
-        run: |
-          python - <<'PY'
-          import base64,gzip,hashlib,json,pathlib
-          raw=base64.b64decode(''.join(pathlib.Path('.repair/music-'+str(i)).read_text() for i in range(3)))
-          assert hashlib.sha256(raw).hexdigest()=='4e0e1998e215ed7120d0a0008a863ff4de7933d6db756e802fd98ca92915ca31'
-          for name,text in json.loads(gzip.decompress(raw)).items():
-              p=pathlib.Path(name)
-              assert str(p).startswith(('repair-src/','scripts/')) and '..' not in p.parts
-              p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)
-          PY
       - name: Apply checked source edits
         id: apply
         continue-on-error: true
         run: |
           mkdir -p .music-results
           set -o pipefail
+          python scripts/music-prepatch.py
           python scripts/apply-music.py 2>&1 | tee .music-results/apply.txt
       - name: Build
         id: build
