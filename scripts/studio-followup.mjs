@@ -1,0 +1,12 @@
+import {readFile,writeFile} from 'node:fs/promises';
+let t=await readFile('tests/impossible.test.cjs','utf8');
+const old="assert(fs.readFileSync('public/analysis-worker.js','utf8').includes('engine.js?v=101'),'Worker uses the current analyzer');";
+const fresh="const engineAsset=html.match(/src=\"(engine\\.js\\?v=\\d+)\"/)[1];assert(fs.readFileSync('public/analysis-worker.js','utf8').includes(engineAsset),'Worker and browser use the same versioned analyzer');";
+if(t.includes(old))t=t.replace(old,fresh);
+await writeFile('tests/impossible.test.cjs',t);
+let b=await readFile('scripts/studio-browser.mjs','utf8');
+b=b.replace("const root=path.resolve('public');","const root=path.resolve(process.env.STUDIO_ROOT||'public');");
+b=b.replace(" const overview=await page.locator('#studioOverview').boundingBox();"," await page.locator('#studioOverview').scrollIntoViewIfNeeded();const overview=await page.locator('#studioOverview').boundingBox();");
+b=b.replace("overview.y+24);await page.click('#studioPaste');","overview.y+24);assert(Math.abs(await page.evaluate(()=>recorder.position)-4.5)<.02,'Overview click moves the cursor to the paste position');await page.click('#studioPaste');");
+await writeFile('scripts/studio-browser.mjs',b);
+console.log('Updated analyzer-version regression and visible waveform interaction in browser tests.');

@@ -16,24 +16,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Restore checksum-verified repair sources
-        id: unpack
+      - name: Apply verification follow-up
+        id: apply
         run: |
           mkdir -p .repair-results
-          node --input-type=module <<'NODE'
-          import {readFileSync,writeFileSync} from 'node:fs';
-          import {createHash} from 'node:crypto';
-          import {brotliDecompressSync} from 'node:zlib';
-          let text=[0,1,2,3].map(i=>readFileSync('.repair/part-'+i,'utf8')).join('');
-          text=text.replace('PRNo4DnYohQsQsMKruIK','PRNo4DnYohQsMKruIK');
-          const data=Buffer.from(text,'base64');
-          if(createHash('sha256').update(data).digest('hex')!=='3973005a59f29200db926bd138ef9a66187b73f2684842e6cbe39e56a6e80ad4')throw Error('Repair source checksum mismatch');
-          writeFileSync('/tmp/studio-source.tar',brotliDecompressSync(data));
-          NODE
-          tar -xf /tmp/studio-source.tar
-      - name: Apply source changes with checked anchors
-        id: apply
-        run: node scripts/apply-studio.mjs
+          node scripts/studio-followup.mjs
       - name: Build and run all unit regressions
         id: tests
         continue-on-error: true
@@ -53,11 +40,15 @@ jobs:
         run: |
           npm install --no-save --package-lock=false playwright
           if ! command -v google-chrome && ! command -v chromium; then npx playwright install --with-deps chromium; fi
-      - name: Exercise real browser editing and playback
+      - name: Exercise real browser editing and playback on both deployments
         id: browser
         if: steps.browser_setup.outcome == 'success'
         continue-on-error: true
-        run: node scripts/studio-browser.mjs
+        run: |
+          node scripts/studio-browser.mjs
+          cp .repair-results/browser.json .repair-results/browser-public.json
+          STUDIO_ROOT=. node scripts/studio-browser.mjs
+          cp .repair-results/browser.json .repair-results/browser-root.json
       - name: Record tested source and diagnostics on repair branch only
         if: always() && steps.apply.outcome == 'success'
         env:
@@ -66,15 +57,13 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import {readFileSync,writeFileSync} from 'node:fs';
-          const p='.repair-results/summary.json';
-          let report={};try{report=JSON.parse(readFileSync(p,'utf8'));}catch{}
-          report.browserOutcome=process.env.BROWSER_OUTCOME;
-          writeFileSync(p,JSON.stringify(report,null,2));
+          const p='.repair-results/summary.json';let report={};try{report=JSON.parse(readFileSync(p,'utf8'));}catch{}
+          report.browserOutcome=process.env.BROWSER_OUTCOME;writeFileSync(p,JSON.stringify(report,null,2));
           NODE
           git config user.name 'Pulse Stage verification'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add public '*.js' '*.css' index.html tests scripts docs dist .repair-results/*.json .repair-results/*.txt
-          git diff --cached --quiet || git commit -m 'Apply Studio 2 sources and record actual verification results'
+          git diff --cached --quiet || git commit -m 'Record Studio browser and generator regression results'
           git push origin HEAD:"$GH_BRANCH"
       - uses: actions/upload-artifact@v4
         if: always()
