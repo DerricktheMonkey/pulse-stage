@@ -1,0 +1,6 @@
+
+> pulse-stage@0.2.0 build
+> node scripts/build.mjs
+
+Public backend connection settings validated.
+Built game, authenticated library API, and embedded browser assets.

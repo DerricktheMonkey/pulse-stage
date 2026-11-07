@@ -1,0 +1,10 @@
+{
+  "passed": [
+    "new vertical creator is primary; recording is optional",
+    "mouse placement and drag-created hold",
+    "move notes across columns and resize hold tails",
+    "chords and undo/redo"
+  ],
+  "errors": [],
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n3 !== 6\n\n    at file:///home/runner/work/pulse-stage/pulse-stage/scripts/studio-browser.mjs:35:180"
+}
