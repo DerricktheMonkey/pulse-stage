@@ -51,6 +51,10 @@ jobs:
           cp .repair-results/browser.json .repair-results/browser-public.json
           STUDIO_ROOT=. node scripts/studio-browser.mjs
           cp .repair-results/browser.json .repair-results/browser-root.json
+      - name: Difficulty labels stay inside the bar
+        run: |
+          node scripts/difficulty-layout-browser.mjs
+          STUDIO_ROOT=. node scripts/difficulty-layout-browser.mjs
       - name: Grade dialogs and neutral UI
         run: |
           node scripts/grades-browser.mjs
