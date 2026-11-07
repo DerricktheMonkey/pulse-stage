@@ -1,0 +1,11 @@
+{
+  "assetVersion": 111,
+  "verifiedSource": "7a6adfaf9f9cc56cf597e7ce32d49e6f3855e2f0",
+  "verificationRun": "https://github.com/DerricktheMonkey/pulse-stage/actions/runs/42345379992",
+  "build": "passed",
+  "unitTests": {"passed": 66, "failed": 0, "skipped": 0},
+  "browser": {"rootAssets": "passed", "publicAssets": "passed", "gradeDialogs": ["SS", "S", "A", "B", "C", "D", "F", "ungraded early exit"], "SSOnlyAllPerfectStyle": true, "neutralCopy": "passed", "beatmapAuthoringSaveReloadPlaytestRegression": "passed"},
+  "grades": {"SS": "Every note Perfect on a completed nonempty chart", "S": "95% or higher unless SS", "A": "90% to below 95%", "B": "80% to below 90%", "C": "70% to below 80%", "D": "Below 70% on a completed chart", "F": "Failed run"},
+  "unchanged": ["note generation", "difficulty budgets", "scroll speed", "judgement windows", "score weights", "ten lives", "life recovery", "leaderboard eligibility"],
+  "copy": "Removed promotional slogans from settings, menus, editor, help, and results; replaced them with functional labels. Removed the AI promotional credit line from README and package description."
+}

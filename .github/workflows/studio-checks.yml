@@ -9,6 +9,7 @@ on:
       - 'index.html'
       - 'tests/**'
       - 'scripts/studio-browser.mjs'
+      - 'scripts/grades-browser.mjs'
       - '.github/workflows/studio-checks.yml'
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - 'index.html'
       - 'tests/**'
       - 'scripts/studio-browser.mjs'
+      - 'scripts/grades-browser.mjs'
       - '.github/workflows/studio-checks.yml'
   workflow_dispatch:
 permissions:
@@ -51,8 +53,14 @@ jobs:
           cp .repair-results/browser.json .repair-results/browser-public.json
           STUDIO_ROOT=. node scripts/studio-browser.mjs
           cp .repair-results/browser.json .repair-results/browser-root.json
+      - name: Result grades and neutral UI on both served builds
+        run: |
+          node scripts/grades-browser.mjs
+          STUDIO_ROOT=. node scripts/grades-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: beatmap-studio-browser-results
-          path: .repair-results
+          path: |
+            .repair-results
+            .grade-results
