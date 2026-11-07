@@ -1,0 +1,100 @@
+name: Verify musical timing and audio edges
+on:
+  push:
+    branches: [fix/music-timing-edge-trim]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Restore checksum-verified source bundle
+        run: |
+          python - <<'PY'
+          import base64,gzip,hashlib,json,pathlib
+          raw=base64.b64decode(''.join(pathlib.Path('.repair/music-'+str(i)).read_text() for i in range(3)))
+          assert hashlib.sha256(raw).hexdigest()=='4e0e1998e215ed7120d0a0008a863ff4de7933d6db756e802fd98ca92915ca31'
+          for name,text in json.loads(gzip.decompress(raw)).items():
+              p=pathlib.Path(name)
+              assert str(p).startswith(('repair-src/','scripts/')) and '..' not in p.parts
+              p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)
+          PY
+      - name: Apply checked source edits
+        id: apply
+        continue-on-error: true
+        run: |
+          mkdir -p .music-results
+          set -o pipefail
+          python scripts/apply-music.py 2>&1 | tee .music-results/apply.txt
+      - name: Build
+        id: build
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee .music-results/build.txt
+      - name: Unit regressions and musicality tests
+        id: unit
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee .music-results/unit.txt
+      - name: Browser dependencies
+        if: steps.apply.outcome == 'success'
+        run: |
+          npm install --no-save --package-lock=false playwright
+          if ! command -v google-chrome && ! command -v chromium; then npx playwright install --with-deps chromium; fi
+      - name: Import, trim, generate, save and reload in Chromium
+        id: browser
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        run: |
+          node scripts/music-browser.mjs
+          cp .music-results/browser.json .music-results/browser-public.json
+          STUDIO_ROOT=. node scripts/music-browser.mjs
+          cp .music-results/browser.json .music-results/browser-root.json
+      - name: Editor and grading regressions
+        id: existing
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        run: |
+          node scripts/studio-browser.mjs
+          node scripts/grades-browser.mjs
+      - name: Record candidate and results on this branch only
+        if: always()
+        env:
+          APPLY: ${{ steps.apply.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
+          EXISTING: ${{ steps.existing.outcome }}
+        run: |
+          mkdir -p .music-results
+          node -e 'require("fs").writeFileSync(".music-results/summary.json",JSON.stringify(Object.fromEntries(["APPLY","BUILD","UNIT","BROWSER","EXISTING"].map(k=>[k,process.env[k]])),null,2))'
+          test "$GITHUB_REF_NAME" = 'fix/music-timing-edge-trim'
+          git config user.name 'Pulse Stage verification'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add '*.js' '*.html' '*.css' public tests scripts docs repair-src .music-results
+          git add -f dist/server/index.js
+          if ! git diff --cached --quiet; then git commit -m 'Apply musicality and audio edge changes; record actual test outcomes'; git push origin HEAD:fix/music-timing-edge-trim; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: music-timing-results
+          path: |
+            .music-results
+            .repair-results
+            .grade-results
+      - name: Require every check to pass
+        if: always()
+        run: |
+          node -e 'const s=require("./.music-results/summary.json");if(Object.values(s).some(x=>x!=="success"))process.exit(1)'
