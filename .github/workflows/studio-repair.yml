@@ -1,0 +1,89 @@
+name: Verify Beatmap Studio repair
+on:
+  push:
+    branches: [fix/creator-generation-verified]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Restore checksum-verified repair sources
+        id: unpack
+        run: |
+          mkdir -p .repair-results
+          node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          import {brotliDecompressSync} from 'node:zlib';
+          let text=[0,1,2,3].map(i=>readFileSync('.repair/part-'+i,'utf8')).join('');
+          text=text.replace('PRNo4DnYohQsQsMKruIK','PRNo4DnYohQsMKruIK');
+          const data=Buffer.from(text,'base64');
+          if(createHash('sha256').update(data).digest('hex')!=='3973005a59f29200db926bd138ef9a66187b73f2684842e6cbe39e56a6e80ad4')throw Error('Repair source checksum mismatch');
+          writeFileSync('/tmp/studio-source.tar',brotliDecompressSync(data));
+          NODE
+          tar -xf /tmp/studio-source.tar
+      - name: Apply source changes with checked anchors
+        id: apply
+        run: node scripts/apply-studio.mjs
+      - name: Build and run all unit regressions
+        id: tests
+        continue-on-error: true
+        run: |
+          set +e
+          npm run build > .repair-results/build.txt 2>&1
+          build=$?
+          npm test > .repair-results/unit.txt 2>&1
+          unit=$?
+          printf '{"buildExit":%s,"unitExit":%s}\n' "$build" "$unit" > .repair-results/summary.json
+          cat .repair-results/build.txt
+          tail -n 90 .repair-results/unit.txt
+          test "$build" -eq 0 && test "$unit" -eq 0
+      - name: Install browser test harness
+        id: browser_setup
+        continue-on-error: true
+        run: |
+          npm install --no-save --package-lock=false playwright
+          if ! command -v google-chrome && ! command -v chromium; then npx playwright install --with-deps chromium; fi
+      - name: Exercise real browser editing and playback
+        id: browser
+        if: steps.browser_setup.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/studio-browser.mjs
+      - name: Record tested source and diagnostics on repair branch only
+        if: always() && steps.apply.outcome == 'success'
+        env:
+          GH_BRANCH: fix/creator-generation-verified
+          BROWSER_OUTCOME: ${{ steps.browser.outcome }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const p='.repair-results/summary.json';
+          let report={};try{report=JSON.parse(readFileSync(p,'utf8'));}catch{}
+          report.browserOutcome=process.env.BROWSER_OUTCOME;
+          writeFileSync(p,JSON.stringify(report,null,2));
+          NODE
+          git config user.name 'Pulse Stage verification'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public '*.js' '*.css' index.html tests scripts docs dist .repair-results/*.json .repair-results/*.txt
+          git diff --cached --quiet || git commit -m 'Apply Studio 2 sources and record actual verification results'
+          git push origin HEAD:"$GH_BRANCH"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-verification
+          path: .repair-results
+      - name: Require every check to pass
+        if: always()
+        env:
+          UNIT_RESULT: ${{ steps.tests.outcome }}
+          BROWSER_RESULT: ${{ steps.browser.outcome }}
+        run: test "$UNIT_RESULT" = success && test "$BROWSER_RESULT" = success
