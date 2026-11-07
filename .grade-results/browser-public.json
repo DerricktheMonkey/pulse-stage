@@ -1,0 +1,10 @@
+{
+  "root": "public",
+  "passed": [
+    "neutral menu/help/results/editor copy and existing creation navigation",
+    "SS/S/A/B/C/D visible in the actual results dialog; SS styling exclusive",
+    "failed attempts show F; early exit has no completion grade",
+    "no browser exceptions or remaining targeted slogans"
+  ],
+  "errors": []
+}

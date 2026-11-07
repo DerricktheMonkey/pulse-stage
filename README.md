@@ -2,8 +2,6 @@
 
 ## [▶ Play Game](https://derrickthemonkey.github.io/pulse-stage/)
 
-> **Vibecoded with ChatGPT/Codex.** Derrick Chu provided the concept, feature requests, and design direction; ChatGPT/Codex generated and revised the implementation.
-
 A browser rhythm game with custom songs, automatic audio scanning, scene-matched backgrounds and tiles, hold notes, simultaneous chords, a life bar, and a chart editor.
 
 ## Online uploads: project configured
@@ -16,7 +14,7 @@ The supplied Supabase Project URL and public publishable key are configured. **S
 - Play requests browser fullscreen and fills the viewport. Press **Escape** to pause, then **Escape again** for the main menu or **R** to restart. Use Resume to continue the run. Holding Escape does not count as two presses.
 - Normal charts include long hold notes: keep the same lane pressed as the ring shrinks. The bright tail cap reaches the hit line and a **RELEASE** cue shows when to let go.
 - Hard charts include simultaneous notes: matching warm glows show which lanes to press together.
-- **S rank** requires every note to be Perfect. A full combo with any Great or Good earns a lower rank.
+- **SS** requires a completed, nonempty chart with every note Perfect. Other completed runs earn **S** at 95% accuracy, **A** at 90%, **B** at 80%, **C** at 70%, or **D** below 70%. Failed runs receive **F**; early exits have no grade. Accuracy uses Perfect = 100%, Great = 80%, Good = 50%, Miss = 0%. Grades use unrounded accuracy.
 - Perfect hits allow up to **120 ms** early or late. Misses drain life; Practice mode disables failure.
 - Older slide charts automatically load as same-lane holds. Click **Scan song & rebuild** to regenerate a chart.
 

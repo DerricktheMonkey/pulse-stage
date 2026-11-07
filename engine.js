@@ -689,7 +689,23 @@ function nextHealth(health,result,difficulty='normal',maxHealth=10){return Math.
 function validateChart(data,duration,{snap=true}={}){if(!data||!Array.isArray(data.notes)||data.notes.length>30000)throw Error('Choose a chart JSON containing a notes array (up to 30,000 notes).');const notes=data.notes.map(n=>{if(!Number.isFinite(n.time)||n.time<0||n.time>duration||!Number.isInteger(n.lane)||n.lane<0||n.lane>3||!Number.isFinite(n.duration??0)||(n.duration??0)<0||n.time+(n.duration??0)>duration+.01)throw Error('Notes need a valid time, lane 0–3, and duration within the song.');const out={time:n.time,lane:n.lane,duration:n.duration||0};if(n.softChord===true)out.softChord=true;return out;}).sort((a,b)=>a.time-b.time||a.lane-b.lane);const ends=[-1,-1,-1,-1];for(const n of notes){const lanes=[n.lane];if(lanes.some(l=>n.time<ends[l]-.001))throw Error('Notes cannot overlap in the same lane.');for(const l of lanes)ends[l]=n.time+Math.max(.035,n.duration);}return snap?snapCloseNotes(notes):notes;}
 // All simultaneous chart notes, including snapped heads, share chord glow.
 function markChords(notes){for(const n of notes)delete n.chord;for(let start=0;start<notes.length;){let end=start+1;while(end<notes.length&&Math.abs(notes[end].time-notes[start].time)<=.001)end++;if(new Set(notes.slice(start,end).map(n=>n.lane)).size>1)for(let i=start;i<end;i++)notes[i].chord=true;start=end;}return notes;}
-function rank(counts,total,complete=true){if(!complete)return 'RETRY';if(total>0&&counts.PERFECT===total&&!(counts.GREAT||counts.GOOD||counts.MISS))return 'S';const judged=(counts.PERFECT||0)+(counts.GREAT||0)+(counts.GOOD||0)+(counts.MISS||0),accuracy=judged?100*((counts.PERFECT||0)+.8*(counts.GREAT||0)+.5*(counts.GOOD||0))/judged:0;return accuracy>=90?'A':accuracy>=80?'B':accuracy>=65?'C':'D';}
+// Grades use the same weighted accuracy as the HUD: Perfect=1, Great=.8, Good=.5.
+// An incomplete or empty chart cannot earn a completion grade, even at 100% so far.
+function rank(counts={},total,complete=true){
+ if(!complete)return 'F';
+ if(!Number.isInteger(total)||total<=0)return '—';
+ const values=['PERFECT','GREAT','GOOD','MISS'].map(key=>counts[key]??0);
+ if(values.some(value=>!Number.isInteger(value)||value<0))return '—';
+ const [perfect,great,good,miss]=values,judged=perfect+great+good+miss;
+ if(judged!==total)return '—';
+ if(perfect===total)return 'SS';
+ // Integer cross-products keep exact thresholds stable and never promote a
+// rounded 99.999% display to an all-Perfect SS.
+ const points=10*perfect+8*great+5*good;
+ for(const [grade,threshold] of [['S',95],['A',90],['B',80],['C',70]])
+  if(points*100>=threshold*10*total)return grade;
+ return 'D';
+}
 function holdCue(note,time){if(!note||note.duration<=.05||note.result)return null;const remaining=Math.max(0,note.time+note.duration-time);return {phase:remaining>0?'HOLD':'RELEASE',remaining,progress:Math.min(1,remaining/note.duration)};}
 function noteIndex(notes,time){let lo=0,hi=notes.length;while(lo<hi){const mid=(lo+hi)>>>1;if(notes[mid].time<time)lo=mid+1;else hi=mid;}return lo;}
 function pendingIndex(notes,start=0){while(start<notes.length&&(notes[start].result||notes[start].started))start++;return start;}
