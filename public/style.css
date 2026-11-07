@@ -43,7 +43,10 @@
 /* Progress uses compositing so the note loop does not trigger layout. */
 #progressFill{width:100%;transform:scaleX(0);transform-origin:left;will-change:transform}
 
-#difficulties{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}#difficulties button{min-width:0}
+/* Size difficulty columns to their full labels, including Impossible. */
+#difficulties{display:grid;grid-template-columns:repeat(5,minmax(max-content,1fr));gap:2px;padding:3px}
+#difficulties button{min-width:0;padding:8px 1px;white-space:nowrap;line-height:1.3}
+#difficulties button:focus-visible{outline-offset:-2px}
 
 /* Gameplay fills the viewport; stats float over the uninterrupted scene. */
 .running .stage-top,.running .stage-bottom{display:none}

@@ -1,0 +1,147 @@
+{
+  "build": "public",
+  "checks": [
+    {
+      "width": 280,
+      "fallback": false,
+      "barWidth": 212,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 320,
+      "fallback": false,
+      "barWidth": 252,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 360,
+      "fallback": false,
+      "barWidth": 292,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 390,
+      "fallback": false,
+      "barWidth": 322,
+      "impossibleWidth": 61.203125,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 480,
+      "fallback": false,
+      "barWidth": 412,
+      "impossibleWidth": 79.1875,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 680,
+      "fallback": false,
+      "barWidth": 612,
+      "impossibleWidth": 119.1875,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 681,
+      "fallback": false,
+      "barWidth": 209,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 768,
+      "fallback": false,
+      "barWidth": 209,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 1024,
+      "fallback": false,
+      "barWidth": 209,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 1150,
+      "fallback": false,
+      "barWidth": 209,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 1151,
+      "fallback": false,
+      "barWidth": 249,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 1280,
+      "fallback": false,
+      "barWidth": 249,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 1440,
+      "fallback": false,
+      "barWidth": 249,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 1920,
+      "fallback": false,
+      "barWidth": 249,
+      "impossibleWidth": 57.0625,
+      "font": "11px / 14.3px \"DM Sans\", system-ui, sans-serif"
+    },
+    {
+      "width": 280,
+      "fallback": true,
+      "barWidth": 212,
+      "impossibleWidth": 61,
+      "font": "11px / 14.3px system-ui, sans-serif"
+    },
+    {
+      "width": 320,
+      "fallback": true,
+      "barWidth": 252,
+      "impossibleWidth": 61,
+      "font": "11px / 14.3px system-ui, sans-serif"
+    },
+    {
+      "width": 360,
+      "fallback": true,
+      "barWidth": 292,
+      "impossibleWidth": 61,
+      "font": "11px / 14.3px system-ui, sans-serif"
+    },
+    {
+      "width": 390,
+      "fallback": true,
+      "barWidth": 322,
+      "impossibleWidth": 61.203125,
+      "font": "11px / 14.3px system-ui, sans-serif"
+    },
+    {
+      "width": 480,
+      "fallback": true,
+      "barWidth": 412,
+      "impossibleWidth": 79.1875,
+      "font": "11px / 14.3px system-ui, sans-serif"
+    },
+    {
+      "width": 680,
+      "fallback": true,
+      "barWidth": 612,
+      "impossibleWidth": 119.1875,
+      "font": "11px / 14.3px system-ui, sans-serif"
+    }
+  ],
+  "errors": [],
+  "failure": "AssertionError [ERR_ASSERTION]: difficulty bar scroll overflow at 681\n    at file:///home/runner/work/pulse-stage/pulse-stage/scripts/difficulty-layout-browser.mjs:33:4"
+}
