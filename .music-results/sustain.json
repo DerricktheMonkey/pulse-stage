@@ -1,0 +1,468 @@
+{
+  "easy": {
+    "target": 8,
+    "count": 8,
+    "holds": [
+      {
+        "time": 0.503,
+        "lane": 0,
+        "duration": 1.796
+      },
+      {
+        "time": 4.906,
+        "lane": 3,
+        "duration": 1.805
+      }
+    ],
+    "attacks": [
+      {
+        "time": 0.5034920634920635,
+        "frequency": 290.6982421875,
+        "strength": 1,
+        "source": "busy",
+        "voices": 2
+      },
+      {
+        "time": 2.2523356009070294,
+        "frequency": 279.931640625,
+        "strength": 0.06594716938484158,
+        "source": "busy",
+        "voices": 1
+      },
+      {
+        "time": 2.7035827664399092,
+        "strength": 0.9281446699428909,
+        "frequency": 441.4306640625,
+        "voices": 1,
+        "source": "busy"
+      },
+      {
+        "time": 4.906122448979592,
+        "frequency": 656.7626953125,
+        "strength": 1,
+        "voices": 1,
+        "lane": 2,
+        "source": "drum"
+      },
+      {
+        "time": 7.103764172335601,
+        "frequency": 333.7646484375,
+        "strength": 0.9839035050206575,
+        "source": "drum",
+        "voices": 2,
+        "lane": 2
+      },
+      {
+        "time": 8.870022675736962,
+        "frequency": 290.6982421875,
+        "strength": 0.06624563312044097,
+        "source": "busy",
+        "voices": 1
+      },
+      {
+        "time": 9.30358276643991,
+        "frequency": 441.4306640625,
+        "strength": 0.8655329217857087,
+        "source": "drum",
+        "voices": 2,
+        "lane": 2
+      },
+      {
+        "time": 11.503945578231292,
+        "strength": 0.9343900874109098,
+        "frequency": 656.7626953125,
+        "voices": 1,
+        "source": "busy"
+      },
+      {
+        "time": 13.704036281179139,
+        "strength": 1,
+        "frequency": 333.7646484375,
+        "voices": 2
+      },
+      {
+        "time": 15.464489795918368,
+        "frequency": 290.6982421875,
+        "strength": 0.07547687157354485,
+        "source": "busy",
+        "voices": 1
+      },
+      {
+        "time": 15.904399092970522,
+        "frequency": 441.4306640625,
+        "strength": 0.9820325880404168,
+        "source": "drum",
+        "voices": 2,
+        "lane": 2
+      },
+      {
+        "time": 18.104580498866213,
+        "strength": 0.8555183093820384,
+        "frequency": 656.7626953125,
+        "voices": 1,
+        "source": "drum",
+        "lane": 2
+      },
+      {
+        "time": 20.304308390022676,
+        "frequency": 290.6982421875,
+        "strength": 0.9147983338262464,
+        "voices": 2,
+        "lane": 2,
+        "source": "busy"
+      },
+      {
+        "time": 22.058956916099774,
+        "frequency": 279.931640625,
+        "strength": 0.07890277907680011,
+        "source": "busy",
+        "voices": 1
+      }
+    ],
+    "base": [
+      {
+        "time": 0.503,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 2.704,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 4.906,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 11.504,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 13.704,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 15.904,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 18.105,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 20.304,
+        "lane": 1,
+        "duration": 0
+      }
+    ]
+  },
+  "impossible": {
+    "target": 254,
+    "count": 152,
+    "holds": [
+      {
+        "time": 2.704,
+        "lane": 2,
+        "duration": 1.789
+      },
+      {
+        "time": 9.304,
+        "lane": 2,
+        "duration": 1.795
+      },
+      {
+        "time": 15.904,
+        "lane": 2,
+        "duration": 1.79
+      }
+    ],
+    "attacks": [
+      {
+        "time": 0.5032199546485261,
+        "frequency": 290.6982421875,
+        "strength": 0.9827241300932527,
+        "source": "drum",
+        "voices": 2,
+        "lane": 2
+      },
+      {
+        "time": 2.2523356009070294,
+        "frequency": 279.931640625,
+        "strength": 0.08026359147468846,
+        "source": "busy",
+        "voices": 1
+      },
+      {
+        "time": 2.7040362811791385,
+        "frequency": 440.07800589205794,
+        "strength": 0.9913269539762705,
+        "source": "drum",
+        "voices": 2,
+        "lane": 2
+      },
+      {
+        "time": 4.903673469387755,
+        "frequency": 656.7626953125,
+        "strength": 0.9928870283256154,
+        "source": "busy",
+        "voices": 1
+      },
+      {
+        "time": 7.103764172335601,
+        "frequency": 290.6982421875,
+        "strength": 0.990990022854544,
+        "source": "busy",
+        "voices": 2
+      },
+      {
+        "time": 8.858412698412698,
+        "frequency": 279.931640625,
+        "strength": 0.07692827905323754,
+        "source": "busy",
+        "voices": 1
+      },
+      {
+        "time": 9.303854875283447,
+        "frequency": 440.33205053684935,
+        "strength": 1,
+        "source": "busy",
+        "voices": 2
+      },
+      {
+        "time": 11.504036281179138,
+        "frequency": 656.7626953125,
+        "strength": 1,
+        "source": "drum",
+        "voices": 1,
+        "lane": 2
+      },
+      {
+        "time": 13.704036281179139,
+        "frequency": 290.6982421875,
+        "strength": 1,
+        "source": "busy",
+        "voices": 2
+      },
+      {
+        "time": 15.452879818594104,
+        "frequency": 279.931640625,
+        "strength": 0.07940985338722863,
+        "source": "busy",
+        "voices": 1
+      },
+      {
+        "time": 15.904036281179138,
+        "frequency": 440.0801043264758,
+        "strength": 0.9959220592880448,
+        "source": "drum",
+        "voices": 2,
+        "lane": 2
+      },
+      {
+        "time": 18.10421768707483,
+        "frequency": 656.7626953125,
+        "strength": 1,
+        "source": "busy",
+        "voices": 1
+      },
+      {
+        "time": 20.304036281179137,
+        "frequency": 290.6982421875,
+        "strength": 0.9888698841320795,
+        "source": "drum",
+        "voices": 2,
+        "lane": 2
+      },
+      {
+        "time": 22.058956916099774,
+        "frequency": 279.931640625,
+        "strength": 0.07581843219225515,
+        "source": "busy",
+        "voices": 1
+      }
+    ],
+    "base": [
+      {
+        "time": 0.503,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 0.503,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 0.558,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 0.613,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 0.667,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 0.722,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 0.776,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 0.831,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 0.885,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 0.94,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 0.995,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 1.05,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 1.105,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 1.159,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 1.214,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 1.268,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 1.323,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 1.377,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 1.431,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 1.486,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 1.54,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 1.595,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 1.649,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 1.704,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 1.759,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 1.814,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 1.869,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 1.923,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 1.978,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 2.033,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 2.088,
+        "lane": 2,
+        "duration": 0
+      },
+      {
+        "time": 2.143,
+        "lane": 1,
+        "duration": 0
+      },
+      {
+        "time": 2.197,
+        "lane": 3,
+        "duration": 0
+      },
+      {
+        "time": 2.252,
+        "lane": 0,
+        "duration": 0
+      },
+      {
+        "time": 2.252,
+        "lane": 2,
+        "duration": 0
+      }
+    ]
+  }
+}

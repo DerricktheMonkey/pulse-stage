@@ -517,7 +517,8 @@ function musicAccents(notes,analysis,difficulty='impossible'){
  if(tracks.length&&dt>0){
   let count=0,end=-Infinity;const cap=Math.max(1,Math.floor(out.length*(out.length/duration<3?settings.sparseHolds||settings.holds:settings.holds)));
   for(let i=0;i<out.length;i++){
-   const n=out[i];if(count>=cap||groups.get(n.time)!==1||n.time<end+settings.holdGap||!nearby(n.time,.04))continue;
+   const n=out[i];// A sustained voice may begin alongside one tap on the same musical attack.
+   if(count>=cap||groups.get(n.time)>2||n.time<end+settings.holdGap||!nearby(n.time,.04))continue;
    // In a dense phrase, give a real sustained voice its own lane while the
    // other melody heads retain their timing on the remaining fingers.
    const limit=settings.singleInput?Math.min(settings.holdLength,(out[i+1]?.time??duration)-n.time-.2):settings.holdLength;

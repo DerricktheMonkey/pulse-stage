@@ -1,1 +1,1 @@
-Applied checked musicality, edge-trimming and mode-removal changes.
+Corrected chord-supported sustains, old preview compatibility and retired difficulty assertions.

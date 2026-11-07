@@ -22,7 +22,7 @@ test('all automatic tiers run and retain the pre-overhaul density budget',()=>{
  const counts={};
  for(const difficulty of ['easy','normal','hard','insane','impossible']){
   const chart=E.analyze(samples,rate,difficulty),prior=E.analyzeLegacy(samples,rate,difficulty);
-  assert(chart.notes.length>0);assert.equal(chart.scanVersion,25);assert.equal(chart.patternStyle,'phrase-aware');E.validateChart(chart,12,{snap:false});
+  assert(chart.notes.length>0);assert.equal(chart.scanVersion,26);assert.equal(chart.patternStyle,'phrase-aware');E.validateChart(chart,12,{snap:false});
   if(difficulty!=='easy'){assert.equal(chart.generation.targetNotes,prior.notes.length);assert.equal(chart.notes.length,prior.notes.length, difficulty+' must not silently halve its density');}
   counts[difficulty]=chart.notes.length;
  }

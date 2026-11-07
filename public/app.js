@@ -45,7 +45,7 @@ async function trimCurrentSong(){
  const original=state.buffer,prepared=prepareSongAudio(original,{notes:[],bpm:state.analysis?.bpm});
  if(!state.audioBytes&&prepared.removed>0){state.audioBytes=wavBytes(original);state.audioType='audio/wav';}
  state.buffer=prepared.buffer;state.audioTrim=prepared.audioTrim;
- await save('song',{bytes:state.audioBytes,name:state.name,type:state.audioType,audioTrim:state.audioTrim,communitySongId:state.communitySongId});
+ if(state.audioBytes)await save('song',{bytes:state.audioBytes,name:state.name,type:state.audioType,audioTrim:state.audioTrim,communitySongId:state.communitySongId});
 }
 function makeSamples(buffer){const rate=11025,len=Math.ceil(buffer.duration*rate),s=new Float32Array(len),channels=Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i)),ratio=buffer.sampleRate/rate;for(let i=0;i<len;i++){let p=Math.min(buffer.length-1,Math.floor(i*ratio)),v=0;for(const ch of channels)v+=ch[p];s[i]=v/channels.length;}return s;}
 function scanSong(buffer,difficulty){const samples=makeSamples(buffer);if(typeof Worker==='undefined')return Promise.resolve(E.analyze(samples,11025,difficulty));return new Promise((resolve,reject)=>{const worker=new Worker('analysis-worker.js?v=112'),timer=setTimeout(()=>{worker.terminate();reject(Error('Scan timed out. Try a shorter audio file.'));},90000);const done=()=>{clearTimeout(timer);worker.terminate();};worker.onmessage=e=>{done();e.data.error?reject(Error(e.data.error)):resolve(e.data.analysis);};worker.onerror=e=>{done();reject(Error(e.message||'Audio scan failed.'));};worker.postMessage({samples,rate:11025,difficulty},[samples.buffer]);});}
