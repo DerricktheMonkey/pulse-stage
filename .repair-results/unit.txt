@@ -5,47 +5,47 @@
 PASS: database migration, authenticated saves, private media, public sharing, ownership, delete cleanup, hold chart round-trip, CSRF and Worker assets.
 PASS: trusted game-origin CORS, preflight, disallowed origins/identity headers and unchanged sign-in requirements.
 PASS: backgrounds above the old 20 MB image limit round-trip unchanged, videos above 20 MB are accepted, and original files stay unchanged.
-✔ tests/api.test.mjs (544.163064ms)
+✔ tests/api.test.mjs (336.733685ms)
 PASS: audio output timestamps, latency fallback, stale/throwing timestamps and pause position.
 PASS: smooth opening through driver timestamp changes, monotonic movement, alignment by the first beat, consistent input/render reads and long-interruption catch-up.
 PASS: 128-sample audio blocks at 60/120/144/240Hz, all training rates, sub-block sync, suspended context, and under 2.0% per-frame speed variation.
-✔ tests/audio-clock.test.cjs (96.115628ms)
+✔ tests/audio-clock.test.cjs (56.252923ms)
 PASS: original 4K background bytes and resolution readout, independent palette sample, and image/video upload limits.
-✔ tests/background-visibility.test.cjs (60.984564ms)
+✔ tests/background-visibility.test.cjs (36.665573ms)
 PASS: two simulated browsers join, reject a third player, vote/load matching charts, synchronize starts, apply cross-player damage, repick all three rounds, agree on match winner and leave cleanly.
-✔ tests/battle-flow.test.cjs (233.071082ms)
+✔ tests/battle-flow.test.cjs (168.822545ms)
 PASS: matched-note normal/double damage, holds, simultaneous knockouts, accuracy ties, latency/duplicate guards, four random choices, repicks and exactly-three-round scoring.
-✔ tests/battle-rules.test.cjs (60.265696ms)
+✔ tests/battle-rules.test.cjs (41.619082ms)
 PASS: realtime protocol join/broadcast/presence frames, room validation, error reporting and cleanup.
-✔ tests/battle-transport.test.cjs (94.897937ms)
+✔ tests/battle-transport.test.cjs (57.288123ms)
 PASS: real peer notes/holds/presses/results, retransmission deduplication, invalid packets, independent chart state, transparent split canvas, middle life bars, one background and round cleanup.
-✔ tests/battle-view.test.cjs (53.187545ms)
-✔ snapping uses song seconds, first beat, and chart offset exactly once (1.300184ms)
-✔ tap and drag-hold placement are exact (1.435205ms)
-✔ moving a selection clamps as one group and preserves holds (0.607533ms)
-✔ hold resize, paste, mirror reject collisions without modifying the source (0.95465ms)
-✔ vertical grid coordinates increase upward (1.778886ms)
+✔ tests/battle-view.test.cjs (31.338164ms)
+✔ snapping uses song seconds, first beat, and chart offset exactly once (0.560304ms)
+✔ tap and drag-hold placement are exact (0.601685ms)
+✔ moving a selection clamps as one group and preserves holds (0.266195ms)
+✔ hold resize, paste, mirror reject collisions without modifying the source (0.419497ms)
+✔ vertical grid coordinates increase upward (1.165215ms)
 PASS: Beginner is below Easy, follows vocal phrasing with solo holds and one active input, preserves fixed speed/ten lives/replenishment, and is available throughout the UI.
-✔ tests/beginner.test.cjs (931.38409ms)
+✔ tests/beginner.test.cjs (603.438991ms)
 PASS: compressed-video warmup requires presented frames, handles timeout/failure/cancellation and old browsers, and prefers AVC/MP4 or VP8 over VP9 when supported.
-✔ tests/compressed-video.test.cjs (69.717416ms)
+✔ tests/compressed-video.test.cjs (45.234521ms)
 PASS: pause/resume, return to menu, same-lane holds and early-release misses.
-✔ tests/controls.test.cjs (48.94265ms)
+✔ tests/controls.test.cjs (30.566464ms)
 PASS: 3-2-1 display, scheduled audio, frozen song position, count-in input suppression, cancellation restoration, half-speed count-in, retake timing and immediate preview.
-✔ tests/countdown.test.cjs (51.116244ms)
+✔ tests/countdown.test.cjs (30.011295ms)
 PASS: left-side creation mode starts empty, keeps play songs separate, restores drafts, blocks busy transitions and removes existing-song Edit tabs.
-✔ tests/creation-mode.test.cjs (47.714564ms)
+✔ tests/creation-mode.test.cjs (38.713033ms)
 PASS: creator BPM detection, manual correction, no generated chart insertion, silent audio and scan-error recovery.
-✔ tests/creator-bpm.test.cjs (52.26934ms)
+✔ tests/creator-bpm.test.cjs (38.102536ms)
 easy 29 → 58
 normal 47 → 94
 hard 75 → 150
 insane 67 → 134
 impossible 76 → 152
 PASS: double single-tap density across all five tiers, immutable holds/chords, silence safety, real-audio integration, ten-life solo cap and one-life miss penalty.
-✔ tests/doubled-generation.test.cjs (2398.519671ms)
+✔ tests/doubled-generation.test.cjs (1357.122206ms)
 PASS: performance recording timestamps, chords, tap/hold detection, stop finalization, retained notes, undo snapshots, 10ms edits, validation, half-speed timing, song end and editor DOM wiring.
-✔ tests/editor.test.cjs (68.890807ms)
+✔ tests/editor.test.cjs (56.379653ms)
 PASS: beat timing, BPM, all difficulties, silence, judgement windows and invalid charts.
 PASS: pitched song scanning, pitch-to-lane mapping, wider hit window and life depletion/recovery.
 PASS: Insane melodic density, 35ms timing, spacing, no release filler, silence and sustained tones.
@@ -54,126 +54,99 @@ PASS: polyphonic musical attacks survive mixed-pitch filtering without invented 
 PASS: unchanged density/timestamps for lane spreading, balanced finger use, hand alternation, finger recovery and attack-time refinement.
 PASS: occasional two-note chords, short three-note bursts, cooldowns, safe fastest streams and unchanged musical attack times.
 PASS: ten lives on every difficulty, one life per missed note, Perfect/Great recovery and bounded lives.
-✔ tests/engine.test.cjs (1629.406395ms)
+✔ tests/engine.test.cjs (1266.821514ms)
 PASS: gameplay life loss, Practice exemption, hit animation trigger, duplicate hit protection and UI wiring.
 PASS: manual end closes pause menu, stops play, displays partial results, preserves judgements and does not save a partial best or award S.
 PASS: Enter immediately after final tap or judged hold counts as complete while audio continues, awards earned S and saves bests; unjudged notes and active holds remain partial.
 PASS: Perfect-only combos reset on Great, Good and Miss, and no streak-break banner remains.
 PASS: real judgement flow applies the selected difficulty life penalty.
 PASS: focused-dropdown Enter reaches actual finish logic and opens results from menu-free practice freeze.
-✔ tests/gameplay.test.cjs (60.314367ms)
+✔ tests/gameplay.test.cjs (58.360182ms)
 PASS: graphics prepared before the first note, reuse, stale-result cleanup, palette/resize resource release, and fallback support.
-✔ tests/graphics-warmup.test.cjs (66.888628ms)
+✔ tests/graphics-warmup.test.cjs (39.653646ms)
 PASS: hold countdown, exact release timing, release cue expiry, removed pause text and removed chord symbols while retaining glow.
-✔ tests/hold-cue.test.cjs (97.026412ms)
+✔ tests/hold-cue.test.cjs (44.372769ms)
 PASS: missed heads, early releases and input loss retire each hold once; late release cannot deduct another life or duplicate a Battle report.
-✔ tests/hold-single-miss.test.cjs (54.074284ms)
+✔ tests/hold-single-miss.test.cjs (58.311213ms)
 PASS: local rhythmic gap filling, exact note/hold preservation, safe held lanes, dense-run/silence guards, beat alignment, independent presses, save/reload, idempotence, offsets and additive UI workflow.
-✔ tests/impossible-gaps.test.cjs (67.089957ms)
+✔ tests/impossible-gaps.test.cjs (47.413007ms)
 PASS: multi-second sparse holds, unchanged concurrent melody heads/lanes, same-lane release safety, silence/pitch/reattack boundaries, six-second cap, and real-audio scanning without hold filler.
-✔ tests/impossible-holds.test.cjs (258.878696ms)
+✔ tests/impossible-holds.test.cjs (137.7826ms)
 PASS: beat-third triplets, straight sixteenths, sparse-section density, silence safeguards, rare triple chords, and tracking a quiet busy voice across changing frequency ranges.
-✔ tests/impossible-rhythm.test.cjs (768.941148ms)
+✔ tests/impossible-rhythm.test.cjs (556.543282ms)
 PASS: 60/75/90/110 BPM challenge, double-time/triplet phrases, exact note preservation, no chord inflation, idempotence, high-density drum recovery, masked 55Hz kicks/broadband snares and steady-noise rejection.
-✔ tests/impossible-tempo-drums.test.cjs (334.562898ms)
-node:internal/assert/utils:77
-    throw err;
-    ^
-
-AssertionError [ERR_ASSERTION]: Worker uses the current analyzer
-    at Object.<anonymous> (/home/runner/work/pulse-stage/pulse-stage/tests/impossible.test.cjs:28:216)
-    at Module._compile (node:internal/modules/cjs/loader:1929:14)
-    at Object..js (node:internal/modules/cjs/loader:2060:10)
-    at Module.load (node:internal/modules/cjs/loader:1651:32)
-    at Module._load (node:internal/modules/cjs/loader:1443:12)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
-    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
-    at node:internal/main/run_main_module:33:47 {
-  generatedMessage: false,
-  code: 'ERR_ASSERTION',
-  actual: false,
-  expected: true,
-  operator: '==',
-  diff: 'simple'
-}
-
-Node.js v24.22.2
-✖ tests/impossible.test.cjs (893.831485ms)
+✔ tests/impossible-tempo-drums.test.cjs (203.832717ms)
+PASS: Impossible trills, triplets, short jacks, bounded chords, holds, safe finger spacing, exact attack timestamps, faster scrolling, real audio scanning, silence and all difficulty controls.
+✔ tests/impossible.test.cjs (480.221617ms)
 PASS: leaderboard RPC payloads, explicit-only auth, and missing-migration error codes.
-✔ tests/leaderboard-backend.test.cjs (98.018149ms)
+✔ tests/leaderboard-backend.test.cjs (65.646764ms)
 PASS: completed-run persistence, rendered scores, names, Practice/partial exclusions, difficulty isolation and honest unavailable Community state.
-✔ tests/leaderboard-flow.test.cjs (83.244139ms)
+✔ tests/leaderboard-flow.test.cjs (54.422568ms)
 PASS: local save includes audio/background/chart/settings, replaces edits, retains multiple songs and reports storage failures.
-✔ tests/local-save.test.cjs (58.435653ms)
+✔ tests/local-save.test.cjs (36.747786ms)
 PASS: sidebar and form auto-compression, compressed-file upload with original dimension metadata, untouched local originals, visible progress and cancellation with no upload.
-✔ tests/media-upload-ui.test.cjs (110.050228ms)
+✔ tests/media-upload-ui.test.cjs (58.018093ms)
 PASS: same-dimension image/video/animation compression, PNG-first optimization, bounded retries, size errors, caching, cancellation, original-file retention, video cleanup and unknown-duration restart. Browser codecs are mocked; live codec testing remains necessary.
-✔ tests/media-upload.test.cjs (96.627249ms)
+✔ tests/media-upload.test.cjs (72.454107ms)
 PASS: occasional supported holds/two-note accents, unchanged totals, at least 80% ordinary taps, sustained-voice/lane safety, strength selection and no unsupported decoration.
-✔ tests/music-accents.test.cjs (766.677551ms)
+✔ tests/music-accents.test.cjs (493.345038ms)
 PASS: same per-song totals across all tiers, strong irregular musical accents, silent rests, BPM-grid independence, no inherited holds/chords, hand recovery and full audio generation.
-✔ tests/music-generation.test.cjs (2480.046615ms)
+✔ tests/music-generation.test.cjs (1545.932356ms)
 PASS: variable musical phrasing, sub-12ms onset coverage across all tiers, consistent counts/speed and rhythmic timing independent of volume swells.
-✔ tests/musical-timing.test.cjs (850.174447ms)
+✔ tests/musical-timing.test.cjs (583.509544ms)
 PASS: difficulty budgets, comparable density across source rates, proportional 30/90-second totals, real musical timestamps, full-song coverage, unchanged sources, intact holds/chords and no silence/hold filler.
-✔ tests/note-density.test.cjs (184.948112ms)
+✔ tests/note-density.test.cjs (119.200654ms)
 PASS: uniform note/hold movement at 60/120/144/240Hz and 0.5/1/2x with 0–4ms dispatch jitter, pause, rewind clamp, and unchanged audio-clock judgments; worst step error 1.06e-12px.
 PASS: complete opening travel after countdown, all refresh/training rates and positive/negative offsets.
-✔ tests/note-motion.test.cjs (1118.978729ms)
+✔ tests/note-motion.test.cjs (681.88811ms)
 PASS: full-density cached heads/caps, identical placement and colors, bounded texture reuse, resize cleanup, fallback and removal of per-note live blur passes.
-✔ tests/note-sprites.test.cjs (58.701498ms)
+✔ tests/note-sprites.test.cjs (46.606883ms)
 PASS: opening-versus-following measurements, boundary stalls, two-run comparison, pause exclusion, motion toggles preserving backgrounds, and local-only reports.
 PASS: late-song stalls, full-run and rolling five-second reports, high-refresh skipped callbacks, draw cost, pause exclusion, bounded history and training-rate clocks.
-✔ tests/opening-diagnostics.test.cjs (62.815849ms)
+✔ tests/opening-diagnostics.test.cjs (55.496088ms)
 PASS: unchanged-size canvas reuse, real resize support, hidden-stage protection and no scene-pixel readbacks while notes move.
-✔ tests/opening-render.test.cjs (56.237403ms)
+✔ tests/opening-render.test.cjs (38.209172ms)
 PASS: chronological presses, arbitrary chord order, hold heads, overdue misses, leaderboard grading, chart isolation and best-run ranking.
-✔ tests/ordered-leaderboard.test.cjs (76.456852ms)
+✔ tests/ordered-leaderboard.test.cjs (67.911886ms)
 PASS: scene hue matching, readable brightness, four lane colors and monochrome/empty fallback.
-✔ tests/palette.test.cjs (35.456167ms)
+✔ tests/palette.test.cjs (33.89028ms)
 PASS: matching equivalence, 4 note reads per keypress and 41 per frame on a 30,000-note chart; binary visibility lookup, cached offset, and off-screen hold completion.
-✔ tests/performance.test.cjs (106.097538ms)
+✔ tests/performance.test.cjs (63.056709ms)
 VERIFIED_DENSITIES {"easy":22,"normal":66,"hard":82,"insane":149,"impossible":153}
-✔ phrase voicing preserves every note head and hold, including chords (9.202601ms)
-✔ louder musical phrases get more detail while the global budget stays fixed (2.027816ms)
-✔ all automatic tiers run and retain the pre-overhaul density budget (1380.481518ms)
+✔ phrase voicing preserves every note head and hold, including chords (5.312971ms)
+✔ louder musical phrases get more detail while the global budget stays fixed (1.931443ms)
+✔ all automatic tiers run and retain the pre-overhaul density budget (833.300789ms)
 PASS: simultaneous-note groups, strict all-Perfect S rank, fullscreen requests/fallback and slogan removal.
-✔ tests/polish.test.cjs (63.408981ms)
+✔ tests/polish.test.cjs (41.44636ms)
 PASS: Esc then R restart, typing/modifier/repeat/modal guards, native library popup, credentialed API origin, device-save tab and offline/account fallback.
-✔ tests/popup-shortcuts.test.cjs (62.389225ms)
+✔ tests/popup-shortcuts.test.cjs (42.865909ms)
 PASS: three-beat 3-2-1 at 60/120/180/240 BPM, frozen notes, audio resume timing, pause/resume remaining beats, cancelled playback, and missing/invalid BPM fallback.
-✔ tests/practice-countdown.test.cjs (58.434891ms)
+✔ tests/practice-countdown.test.cjs (40.785543ms)
 PASS: menu-free Space freeze/resume, preserved pattern/score/combo/hold keys, ignored repeats/typing/modals/battle and regular Escape menu access.
-✔ tests/practice-freeze.test.cjs (63.176415ms)
+✔ tests/practice-freeze.test.cjs (33.295663ms)
 PASS: fixed speed across all difficulties/densities, 24 overlapping hit effects at 240Hz without live blur or allocations, graphics cleanup and fallback.
-✔ tests/render-work.test.cjs (99.227927ms)
+✔ tests/render-work.test.cjs (65.659174ms)
 PASS: exact simultaneous heads within 40ms, no chain collapse, same-key repeats, safe hold gaps and release times, stable save/reload, unchanged source data and chord glow after save/reload.
-✔ tests/simultaneous-notes.test.cjs (112.006028ms)
+✔ tests/simultaneous-notes.test.cjs (77.922435ms)
 PASS: in-page upload form, file limits, safe same-tab sign-in checkpoint, storage-failure guard, authenticated return, restored upload and no new-window handoffs.
-✔ tests/single-tab-upload.test.cjs (53.977271ms)
+✔ tests/single-tab-upload.test.cjs (39.348167ms)
 PASS: explicit-only audio previews without pop-outs, card selection by mouse/keyboard, isolated buttons, disabled choices, ten-second limit, single playback, cancellation, autoplay fallback, URL cleanup and local search/loading.
-✔ tests/song-preview.test.cjs (101.591294ms)
+✔ tests/song-preview.test.cjs (56.304369ms)
 PASS: video decoder prepared before countdown, paused first-frame restoration, timeout/rejection fallbacks and callback cleanup.
-✔ tests/startup-prewarm.test.cjs (50.789628ms)
+✔ tests/startup-prewarm.test.cjs (36.613776ms)
 PASS: paused first-frame preparation, bounded load wait, frozen initial/mid-song countdowns, zero reset on restart, cancellation, Motion off and late-play protection.
-✔ tests/startup.test.cjs (72.806582ms)
+✔ tests/startup.test.cjs (46.494621ms)
 PASS: Supabase config/key guards, no-cookie transport, email/device authentication, session refresh, original-file upload/finalization, incomplete cleanup, private/public routing, metadata, downloads and delete ordering. Live SQL policies still require a real project.
-✔ tests/supabase-backend.test.cjs (173.227034ms)
+✔ tests/supabase-backend.test.cjs (119.589439ms)
 PASS: email-code and device sign-in stay in the popup, preserve imported files, use no legacy cookie requests, show pending setup honestly, and keep device saves available.
-✔ tests/supabase-ui.test.cjs (93.096446ms)
+✔ tests/supabase-ui.test.cjs (83.086554ms)
 PASS: 0.50–2.00× audio/chart sync, holds retain durations, unchanged chart, pause/resume, five-second rewind, effective-BPM countdown, paused speed changes, battle/editor/normal guards and UI controls.
-✔ tests/training-rate.test.cjs (54.678994ms)
+✔ tests/training-rate.test.cjs (28.644806ms)
 ℹ tests 62
 ℹ suites 0
-ℹ pass 61
-ℹ fail 1
+ℹ pass 62
+ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 6227.555174
-
-✖ failing tests:
-
-test at tests/impossible.test.cjs:1:1
-✖ tests/impossible.test.cjs (893.831485ms)
-  'test failed'
+ℹ duration_ms 3995.839786

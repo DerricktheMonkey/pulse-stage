@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "title": "Studio Test",
+  "difficulty": "normal",
+  "offsetMs": 0,
+  "rating": 1,
+  "chordGlow": true,
+  "customChart": true,
+  "bpm": 135,
+  "creatorTiming": {
+    "bpm": 135,
+    "anchor": 0.1,
+    "division": 4,
+    "span": 4
+  },
+  "notes": [
+    {
+      "time": 1.25,
+      "lane": 1,
+      "duration": 0
+    },
+    {
+      "time": 1.25,
+      "lane": 3,
+      "duration": 0
+    },
+    {
+      "time": 1.5,
+      "lane": 2,
+      "duration": 1.5
+    },
+    {
+      "time": 4.5,
+      "lane": 1,
+      "duration": 0
+    },
+    {
+      "time": 4.5,
+      "lane": 3,
+      "duration": 0
+    },
+    {
+      "time": 4.75,
+      "lane": 2,
+      "duration": 1.5
+    }
+  ]
+}

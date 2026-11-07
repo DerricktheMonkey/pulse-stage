@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {existsSync} from 'node:fs';
 await mkdir('.repair-results',{recursive:true});
-const root=path.resolve('public');
+const root=path.resolve(process.env.STUDIO_ROOT||'public');
 const server=createServer(async(req,res)=>{try{const file=path.join(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname));const target=(await stat(file)).isDirectory()?path.join(file,'index.html'):file;if(!target.startsWith(root+path.sep))throw Error('Invalid path');const data=await readFile(target);res.setHeader('Content-Type',target.endsWith('.html')?'text/html':target.endsWith('.css')?'text/css':'text/javascript');res.end(data);}catch{res.writeHead(404);res.end('Not found');}});
 await new Promise(resolve=>server.listen(4173,'127.0.0.1',resolve));
 const chrome=['/usr/bin/google-chrome','/usr/bin/chromium'].find(existsSync);
@@ -32,7 +32,7 @@ try{
  await page.selectOption('#mapTool','draw');await clickNote(1.25,3);assert.equal((await noteState()).length,3);
  await page.click('#editorUndo');assert.equal((await noteState()).length,2);await page.click('#mapRedo');assert.equal((await noteState()).length,3);passed.push('chords and undo/redo');
  await page.locator('#timeline').focus();await page.keyboard.press('Control+a');await page.keyboard.press('Control+c');assert.equal(await page.evaluate(()=>BeatmapStudio.clipboard.length),3);
- const overview=await page.locator('#studioOverview').boundingBox();await page.mouse.click(overview.x+overview.width*4.5/12,overview.y+24);await page.click('#studioPaste');assert.equal((await noteState()).length,6);
+ await page.locator('#studioOverview').scrollIntoViewIfNeeded();const overview=await page.locator('#studioOverview').boundingBox();await page.mouse.click(overview.x+overview.width*4.5/12,overview.y+24);assert(Math.abs(await page.evaluate(()=>recorder.position)-4.5)<.02,'Overview click moves the cursor to the paste position');await page.click('#studioPaste');assert.equal((await noteState()).length,6);
  await page.click('#studioPaste');assert.equal((await noteState()).length,6);assert.match(await page.locator('#recordStatus').innerText(),/overlap/);passed.push('multi-select/copy/paste and overlap rejection');
  await page.locator('#alignBpm').fill('135');await page.locator('#alignBpm').press('Tab');await page.locator('#alignAnchor').fill('0.1');await page.locator('#alignAnchor').press('Tab');
  const expected=await noteState();

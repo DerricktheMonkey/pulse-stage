@@ -1,0 +1,14 @@
+{
+  "passed": [
+    "new vertical creator is primary; recording is optional",
+    "mouse placement and drag-created hold",
+    "move notes across columns and resize hold tails",
+    "chords and undo/redo",
+    "multi-select/copy/paste and overlap rejection",
+    "lossless export/import including BPM and first beat",
+    "local save, reload, and reopen saved map for editing",
+    "real gameplay playtest returns to exact draft without ranked scoring",
+    "responsive mobile layout"
+  ],
+  "errors": []
+}
