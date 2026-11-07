@@ -1,0 +1,77 @@
+name: Verify grade and UI cleanup
+on:
+  push:
+    branches: [fix/grades-ui-cleanup]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/fix/grades-ui-cleanup'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply checked source changes
+        id: apply
+        run: node scripts/apply-grades-cleanup.mjs
+      - name: Build
+        id: build
+        continue-on-error: true
+        run: |
+          mkdir -p .grade-results
+          set -o pipefail
+          npm run build 2>&1 | tee .grade-results/build.txt
+      - name: Unit regressions
+        id: unit
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee .grade-results/unit.txt
+      - name: Browser dependencies
+        run: npm install --no-save --package-lock=false playwright
+      - name: Test grades and UI on both served builds
+        id: browser
+        continue-on-error: true
+        run: |
+          STUDIO_ROOT=public node scripts/grades-browser.mjs
+          STUDIO_ROOT=. node scripts/grades-browser.mjs
+      - name: Existing beatmap authoring and playtest regression
+        id: studio
+        continue-on-error: true
+        run: |
+          STUDIO_ROOT=public node scripts/studio-browser.mjs
+          STUDIO_ROOT=. node scripts/studio-browser.mjs
+      - name: Record candidate source and honest verification results
+        if: always()
+        env:
+          APPLY: ${{ steps.apply.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
+          STUDIO: ${{ steps.studio.outcome }}
+        run: |
+          mkdir -p .grade-results
+          node -e "require('fs').writeFileSync('.grade-results/summary.json',JSON.stringify(Object.fromEntries(['APPLY','BUILD','UNIT','BROWSER','STUDIO'].map(k=>[k,process.env[k]])),null,2))"
+          git config user.name 'Pulse Stage verification'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add engine.js app.js index.html studio.js analysis-worker.js public/ README.md package.json tests/ dist/ .grade-results/
+          git diff --cached --quiet || git commit -m 'Apply grade and UI cleanup; record verification results'
+          git push origin HEAD:fix/grades-ui-cleanup
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: grades-ui-verification
+          path: .grade-results/
+      - name: Require every check to pass
+        if: always()
+        env:
+          APPLY: ${{ steps.apply.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
+          STUDIO: ${{ steps.studio.outcome }}
+        run: node -e "for(const k of ['APPLY','BUILD','UNIT','BROWSER','STUDIO'])if(process.env[k]!=='success')throw Error(k+' did not pass: '+process.env[k])"
