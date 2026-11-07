@@ -1,0 +1,32 @@
+{
+  "passed": [
+    "Beginner removed from play, creation and battle controls",
+    "real decoded stereo trims both edges, preserves original bytes and inner silence",
+    "all five difficulties scan in the real worker with valid notes",
+    "legacy difficulty imports as Easy without changing authored notes",
+    "save/reload keeps timing exact and does not trim the same song twice",
+    "saved level loader restores cropped playback against original audio",
+    "old saved charts rebase once, preserving hold lengths and source alignment"
+  ],
+  "errors": [],
+  "counts": {
+    "easy": 30,
+    "normal": 66,
+    "hard": 106,
+    "insane": 94,
+    "impossible": 106
+  },
+  "audio": {
+    "duration": 12.147165532879818,
+    "trim": {
+      "version": 1,
+      "start": 1.9545124716553288,
+      "end": 14.101678004535147,
+      "sourceDuration": 16
+    },
+    "byteLength": 705644,
+    "channels": 2,
+    "notes": 66,
+    "internal": 0
+  }
+}

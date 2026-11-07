@@ -1,7 +1,1 @@
-Traceback (most recent call last):
-  File "/home/runner/work/pulse-stage/pulse-stage/scripts/apply-music.py", line 75, in <module>
-    s=once(s,'state.notes=E.validateChart(chart,state.buffer.duration);state.analysis=await scanSong', 'state.notes=E.validateChart(restored.chart,state.buffer.duration,{snap:false});state.creatorTiming=restored.chart.creatorTiming||null;state.analysis=await scanSong')
-  File "/home/runner/work/pulse-stage/pulse-stage/scripts/apply-music.py", line 11, in once
-    if n!=1: raise RuntimeError('Expected one anchor, found '+str(n)+': '+a[:160])
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-RuntimeError: Expected one anchor, found 0: state.notes=E.validateChart(chart,state.buffer.duration);state.analysis=await scanSong
+Applied checked musicality, edge-trimming and mode-removal changes.

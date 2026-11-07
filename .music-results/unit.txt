@@ -1,0 +1,265 @@
+
+> pulse-stage@0.2.0 test
+> node --test tests/*.test.cjs tests/*.test.mjs
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'easy' !== 'beginner'
+
+    at file:///home/runner/work/pulse-stage/pulse-stage/tests/api.test.mjs:11:254 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'easy',
+  expected: 'beginner',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.22.2
+✖ tests/api.test.mjs (90.749683ms)
+PASS: audio output timestamps, latency fallback, stale/throwing timestamps and pause position.
+PASS: smooth opening through driver timestamp changes, monotonic movement, alignment by the first beat, consistent input/render reads and long-interruption catch-up.
+PASS: 128-sample audio blocks at 60/120/144/240Hz, all training rates, sub-block sync, suspended context, and under 2.0% per-frame speed variation.
+✔ tests/audio-clock.test.cjs (61.827217ms)
+✔ only edge silence is cropped; anti-phase stereo and internal rests survive exactly (18.255677ms)
+✔ quiet intros and fade tails remain; fully silent and short files stay valid (6.399538ms)
+✔ legacy charts are rebased once; metadata reload is idempotent and holds stay intact (1.961817ms)
+✔ manual notes and offset hold tails are never cut; mismatched source metadata is rejected (1.760616ms)
+PASS: original 4K background bytes and resolution readout, independent palette sample, and image/video upload limits.
+✔ tests/background-visibility.test.cjs (29.637513ms)
+PASS: two simulated browsers join, reject a third player, vote/load matching charts, synchronize starts, apply cross-player damage, repick all three rounds, agree on match winner and leave cleanly.
+✔ tests/battle-flow.test.cjs (167.963842ms)
+PASS: matched-note normal/double damage, holds, simultaneous knockouts, accuracy ties, latency/duplicate guards, four random choices, repicks and exactly-three-round scoring.
+✔ tests/battle-rules.test.cjs (28.885718ms)
+PASS: realtime protocol join/broadcast/presence frames, room validation, error reporting and cleanup.
+✔ tests/battle-transport.test.cjs (50.33075ms)
+PASS: real peer notes/holds/presses/results, retransmission deduplication, invalid packets, independent chart state, transparent split canvas, middle life bars, one background and round cleanup.
+✔ tests/battle-view.test.cjs (32.084791ms)
+✔ snapping uses song seconds, first beat, and chart offset exactly once (0.870259ms)
+✔ tap and drag-hold placement are exact (0.870519ms)
+✔ moving a selection clamps as one group and preserves holds (0.330904ms)
+✔ hold resize, paste, mirror reject collisions without modifying the source (0.918881ms)
+✔ vertical grid coordinates increase upward (0.886843ms)
+PASS: five selectable modes, no Beginner generator, legacy difficulty compatibility, unchanged gameplay.
+✔ tests/beginner.test.cjs (90.497296ms)
+PASS: compressed-video warmup requires presented frames, handles timeout/failure/cancellation and old browsers, and prefers AVC/MP4 or VP8 over VP9 when supported.
+✔ tests/compressed-video.test.cjs (39.552363ms)
+PASS: pause/resume, return to menu, same-lane holds and early-release misses.
+✔ tests/controls.test.cjs (34.729371ms)
+PASS: 3-2-1 display, scheduled audio, frozen song position, count-in input suppression, cancellation restoration, half-speed count-in, retake timing and immediate preview.
+✔ tests/countdown.test.cjs (34.899349ms)
+PASS: left-side creation mode starts empty, keeps play songs separate, restores drafts, blocks busy transitions and removes existing-song Edit tabs.
+✔ tests/creation-mode.test.cjs (33.943173ms)
+PASS: creator BPM detection, manual correction, no generated chart insertion, silent audio and scan-error recovery.
+✔ tests/creator-bpm.test.cjs (30.011086ms)
+easy 29 → 58
+normal 47 → 94
+hard 75 → 150
+insane 67 → 134
+impossible 76 → 152
+PASS: double single-tap density across all five tiers, immutable holds/chords, silence safety, real-audio integration, ten-life solo cap and one-life miss penalty.
+✔ tests/doubled-generation.test.cjs (1410.634007ms)
+PASS: performance recording timestamps, chords, tap/hold detection, stop finalization, retained notes, undo snapshots, 10ms edits, validation, half-speed timing, song end and editor DOM wiring.
+✔ tests/editor.test.cjs (34.291217ms)
+PASS: beat timing, BPM, all difficulties, silence, judgement windows and invalid charts.
+PASS: pitched song scanning, pitch-to-lane mapping, wider hit window and life depletion/recovery.
+PASS: Insane melodic density, 35ms timing, spacing, no release filler, silence and sustained tones.
+PASS: music selection, noise rejection and player-controlled scroll speed across every difficulty.
+PASS: polyphonic musical attacks survive mixed-pitch filtering without invented timestamps.
+PASS: unchanged density/timestamps for lane spreading, balanced finger use, hand alternation, finger recovery and attack-time refinement.
+PASS: occasional two-note chords, short three-note bursts, cooldowns, safe fastest streams and unchanged musical attack times.
+PASS: ten lives on every difficulty, one life per missed note, Perfect/Great recovery and bounded lives.
+✔ tests/engine.test.cjs (988.45895ms)
+PASS: gameplay life loss, Practice exemption, hit animation trigger, duplicate hit protection and UI wiring.
+PASS: manual end closes pause menu, stops play, displays partial results, preserves judgements and does not save a partial best or award SS.
+PASS: Enter immediately after final tap or judged hold counts as complete while audio continues, awards earned SS and saves bests; unjudged notes and active holds remain partial.
+PASS: Perfect-only combos reset on Great, Good and Miss, and no streak-break banner remains.
+PASS: real judgement flow applies the selected difficulty life penalty.
+PASS: focused-dropdown Enter reaches actual finish logic and opens results from menu-free practice freeze.
+✔ tests/gameplay.test.cjs (42.003589ms)
+✔ SS is exclusive to all-Perfect completion, not rounded accuracy or a full combo (1.593457ms)
+✔ all boundaries use raw weighted accuracy without rounding up (0.257274ms)
+✔ all UI builds have neutral copy, correct help, and matched worker cache versions (2.509534ms)
+✔ actual results handler displays every grade, only SS glows, and partial/failed runs do not save (2.322315ms)
+PASS: graphics prepared before the first note, reuse, stale-result cleanup, palette/resize resource release, and fallback support.
+✔ tests/graphics-warmup.test.cjs (42.749893ms)
+PASS: hold countdown, exact release timing, release cue expiry, removed pause text and removed chord symbols while retaining glow.
+✔ tests/hold-cue.test.cjs (57.690724ms)
+PASS: missed heads, early releases and input loss retire each hold once; late release cannot deduct another life or duplicate a Battle report.
+✔ tests/hold-single-miss.test.cjs (35.56354ms)
+PASS: local rhythmic gap filling, exact note/hold preservation, safe held lanes, dense-run/silence guards, beat alignment, independent presses, save/reload, idempotence, offsets and additive UI workflow.
+✔ tests/impossible-gaps.test.cjs (49.503059ms)
+PASS: multi-second sparse holds, unchanged concurrent melody heads/lanes, same-lane release safety, silence/pitch/reattack boundaries, six-second cap, and real-audio scanning without hold filler.
+✔ tests/impossible-holds.test.cjs (151.614724ms)
+PASS: beat-third triplets, straight sixteenths, sparse-section density, silence safeguards, rare triple chords, and tracking a quiet busy voice across changing frequency ranges.
+✔ tests/impossible-rhythm.test.cjs (730.36219ms)
+PASS: 60/75/90/110 BPM challenge, double-time/triplet phrases, exact note preservation, no chord inflation, idempotence, high-density drum recovery, masked 55Hz kicks/broadband snares and steady-noise rejection.
+✔ tests/impossible-tempo-drums.test.cjs (230.653123ms)
+PASS: Impossible trills, triplets, short jacks, bounded chords, holds, safe finger spacing, exact attack timestamps, faster scrolling, real audio scanning, silence and all difficulty controls.
+✔ tests/impossible.test.cjs (580.013176ms)
+PASS: leaderboard RPC payloads, explicit-only auth, and missing-migration error codes.
+✔ tests/leaderboard-backend.test.cjs (59.261773ms)
+PASS: completed-run persistence, rendered scores, names, Practice/partial exclusions, difficulty isolation and honest unavailable Community state.
+✔ tests/leaderboard-flow.test.cjs (66.507624ms)
+PASS: local save includes audio/background/chart/settings, replaces edits, retains multiple songs and reports storage failures.
+✔ tests/local-save.test.cjs (39.995332ms)
+PASS: sidebar and form auto-compression, compressed-file upload with original dimension metadata, untouched local originals, visible progress and cancellation with no upload.
+✔ tests/media-upload-ui.test.cjs (64.563429ms)
+PASS: same-dimension image/video/animation compression, PNG-first optimization, bounded retries, size errors, caching, cancellation, original-file retention, video cleanup and unknown-duration restart. Browser codecs are mocked; live codec testing remains necessary.
+✔ tests/media-upload.test.cjs (77.013223ms)
+PASS: occasional supported holds/two-note accents, unchanged totals, at least 80% ordinary taps, sustained-voice/lane safety, strength selection and no unsupported decoration.
+node:internal/assert/utils:77
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: Preserve sustained voices even in a dense chart
+    at Object.<anonymous> (/home/runner/work/pulse-stage/pulse-stage/tests/music-accents.test.cjs:14:46)
+    at Module._compile (node:internal/modules/cjs/loader:1929:14)
+    at Object..js (node:internal/modules/cjs/loader:2060:10)
+    at Module.load (node:internal/modules/cjs/loader:1651:32)
+    at Module._load (node:internal/modules/cjs/loader:1443:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.22.2
+✖ tests/music-accents.test.cjs (296.491578ms)
+MUSICALITY_COUNTS {"easy":31,"normal":68,"hard":110,"insane":98,"impossible":143}
+✔ the first audible attack is mapped even at the beginning of cropped audio (2.577876ms)
+✔ subdivision cannot jump across a rest even with a loud midpoint (0.631231ms)
+✔ lane variation never changes note times, count, chord membership or hold lengths (10.048973ms)
+✔ full scans preserve the existing challenge budgets on supported continuous music (947.691611ms)
+PASS: same per-song totals across all tiers, strong irregular musical accents, silent rests, BPM-grid independence, no inherited holds/chords, hand recovery and full audio generation.
+✔ tests/music-generation.test.cjs (1468.789355ms)
+PASS: variable musical phrasing, sub-12ms onset coverage across all tiers, consistent counts/speed and rhythmic timing independent of volume swells.
+✔ tests/musical-timing.test.cjs (527.141917ms)
+PASS: difficulty budgets, comparable density across source rates, proportional 30/90-second totals, real musical timestamps, full-song coverage, unchanged sources, intact holds/chords and no silence/hold filler.
+✔ tests/note-density.test.cjs (123.392586ms)
+PASS: uniform note/hold movement at 60/120/144/240Hz and 0.5/1/2x with 0–4ms dispatch jitter, pause, rewind clamp, and unchanged audio-clock judgments; worst step error 1.06e-12px.
+PASS: complete opening travel after countdown, all refresh/training rates and positive/negative offsets.
+✔ tests/note-motion.test.cjs (624.539979ms)
+PASS: full-density cached heads/caps, identical placement and colors, bounded texture reuse, resize cleanup, fallback and removal of per-note live blur passes.
+✔ tests/note-sprites.test.cjs (45.889958ms)
+PASS: opening-versus-following measurements, boundary stalls, two-run comparison, pause exclusion, motion toggles preserving backgrounds, and local-only reports.
+PASS: late-song stalls, full-run and rolling five-second reports, high-refresh skipped callbacks, draw cost, pause exclusion, bounded history and training-rate clocks.
+✔ tests/opening-diagnostics.test.cjs (51.349934ms)
+PASS: unchanged-size canvas reuse, real resize support, hidden-stage protection and no scene-pixel readbacks while notes move.
+✔ tests/opening-render.test.cjs (40.327704ms)
+PASS: chronological presses, arbitrary chord order, hold heads, overdue misses, leaderboard grading, chart isolation and best-run ranking.
+✔ tests/ordered-leaderboard.test.cjs (54.414691ms)
+PASS: scene hue matching, readable brightness, four lane colors and monochrome/empty fallback.
+✔ tests/palette.test.cjs (38.552816ms)
+PASS: matching equivalence, 4 note reads per keypress and 41 per frame on a 30,000-note chart; binary visibility lookup, cached offset, and off-screen hold completion.
+✔ tests/performance.test.cjs (77.974057ms)
+✔ phrase voicing preserves every note head and hold, including chords (4.395419ms)
+✔ louder musical phrases get more detail while the global budget stays fixed (1.350835ms)
+✖ all automatic tiers run and retain the pre-overhaul density budget (270.398093ms)
+PASS: simultaneous-note groups, strict all-Perfect SS rank, fullscreen requests/fallback and slogan removal.
+✔ tests/polish.test.cjs (52.022208ms)
+PASS: Esc then R restart, typing/modifier/repeat/modal guards, native library popup, credentialed API origin, device-save tab and offline/account fallback.
+✔ tests/popup-shortcuts.test.cjs (55.635513ms)
+PASS: three-beat 3-2-1 at 60/120/180/240 BPM, frozen notes, audio resume timing, pause/resume remaining beats, cancelled playback, and missing/invalid BPM fallback.
+✔ tests/practice-countdown.test.cjs (36.768614ms)
+PASS: menu-free Space freeze/resume, preserved pattern/score/combo/hold keys, ignored repeats/typing/modals/battle and regular Escape menu access.
+✔ tests/practice-freeze.test.cjs (34.560544ms)
+PASS: fixed speed across all difficulties/densities, 24 overlapping hit effects at 240Hz without live blur or allocations, graphics cleanup and fallback.
+✔ tests/render-work.test.cjs (46.838378ms)
+PASS: exact simultaneous heads within 40ms, no chain collapse, same-key repeats, safe hold gaps and release times, stable save/reload, unchanged source data and chord glow after save/reload.
+✔ tests/simultaneous-notes.test.cjs (68.467267ms)
+PASS: in-page upload form, file limits, safe same-tab sign-in checkpoint, storage-failure guard, authenticated return, restored upload and no new-window handoffs.
+✔ tests/single-tab-upload.test.cjs (36.077162ms)
+evalmachine.<anonymous>:1
+async function listLocalSongs(cards=$('localSongCards'),message=$('localSaveStatus')){const request=cards.songListRequest=(cards.songListRequest||0)+1,index=await read('localLevels')||[];if(cards.songListRequest!==request)return;if(typeof SongPreview!=='undefined')SongPreview.stop();const query=$(cards===$('localSongCards')?'localSongSearch':'libraryLocalSearch').value,filtered=index.filter(item=>SongPreview.matchesSong(item,query));cards.replaceChildren();message.textContent=!index.length?'No saved songs yet. Import a song, choose a background, then click Save Song.':!filtered.length?'No saved songs match your search.':'';for(const item of filtered){const card=document.createElement('div');card.className='song-card';const detail=document.createElement('div'),name=document.createElement('strong'),meta=document.createElement('small');name.textContent=item.name;meta.textContent=(item.difficulty==='beginner'?'easy':item.difficulty)+(item.rating?' · Lv. '+item.rating:'')+' · '+fmt(item.duration)+' · '+item.noteCount+' notes';detail.append(name,meta);const actions=document.createElement('div');actions.className='song-actions';const load=document.createElement('button');load.className='secondary';load.textContent='Load song';load.onclick=async()=>{load.disabled=true;try{const level=await read('localLevel:'+item.id);if(!level)throw Error('This save is missing.');await applyLevel(level);if($('localSongsDialog').open)$('localSongsDialog').close();if($('libraryDialog').open)$('libraryDialog').close();status('Loaded “'+state.name+'”. Press Play Track when ready.');}catch(e){message.textContent=e.message;}finally{load.disabled=false;}};const remove=document.createElement('button');remove.className='secondary';remove.textContent='Delete';remove.onclick=async()=>{if(!confirm('Delete this saved copy from this device?'))return;try{await deleteLocalKey('localLevel:'+item.id);await save('localLevels',index.filter(row=>row.id!==item.id));await listLocalSongs(cards,message);}catch(e){message.textContent=e.message;}};const board=document.createElement('button');board.className='secondary';board.textContent='Leaderboard';board.onclick=()=>Leaderboard.openLocal(item.id);actions.append(load,board,remove);card.append(detail,actions);cards.append(card);SongPreview.selectable(card,load);SongPreview.attach(card,async signal=>{const level=await read('localLevel:'+item.id);if(signal.aborted)throw new DOMException('Cancelled','AbortError');if(!level)throw Error('This save is missing.');return {audio:new Blob([level.audioBytes],{type:level.audioType||'audio/wav'}),duration:level.duration,audioTrim:level.chart.audioTrim};});}}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+
+TypeError: Cannot read properties of undefined (reading 'audioTrim')
+    at Array.<anonymous> (evalmachine.<anonymous>:1:2626)
+    at async /home/runner/work/pulse-stage/pulse-stage/tests/song-preview.test.cjs:18:776
+
+Node.js v24.22.2
+✖ tests/song-preview.test.cjs (32.575351ms)
+PASS: video decoder prepared before countdown, paused first-frame restoration, timeout/rejection fallbacks and callback cleanup.
+✔ tests/startup-prewarm.test.cjs (36.60157ms)
+PASS: paused first-frame preparation, bounded load wait, frozen initial/mid-song countdowns, zero reset on restart, cancellation, Motion off and late-play protection.
+✔ tests/startup.test.cjs (39.404157ms)
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'easy' !== 'beginner'
+
+    at /home/runner/work/pulse-stage/pulse-stage/tests/supabase-backend.test.cjs:13:216 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'easy',
+  expected: 'beginner',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.22.2
+✖ tests/supabase-backend.test.cjs (52.695092ms)
+PASS: email-code and device sign-in stay in the popup, preserve imported files, use no legacy cookie requests, show pending setup honestly, and keep device saves available.
+✔ tests/supabase-ui.test.cjs (54.48128ms)
+PASS: 0.50–2.00× audio/chart sync, holds retain durations, unchanged chart, pause/resume, five-second rewind, effective-BPM countdown, paused speed changes, battle/editor/normal guards and UI controls.
+✔ tests/training-rate.test.cjs (35.264057ms)
+ℹ tests 74
+ℹ suites 0
+ℹ pass 69
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3642.947321
+
+✖ failing tests:
+
+test at tests/api.test.mjs:1:1
+✖ tests/api.test.mjs (90.749683ms)
+  'test failed'
+
+test at tests/music-accents.test.cjs:1:1
+✖ tests/music-accents.test.cjs (296.491578ms)
+  'test failed'
+
+test at tests/phrase-generation.test.cjs:19:1
+✖ all automatic tiers run and retain the pre-overhaul density budget (270.398093ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  26 !== 25
+  
+      at TestContext.<anonymous> (/home/runner/work/pulse-stage/pulse-stage/tests/phrase-generation.test.cjs:25:39)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 26,
+    expected: 25,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/song-preview.test.cjs:1:1
+✖ tests/song-preview.test.cjs (32.575351ms)
+  'test failed'
+
+test at tests/supabase-backend.test.cjs:1:1
+✖ tests/supabase-backend.test.cjs (52.695092ms)
+  'test failed'

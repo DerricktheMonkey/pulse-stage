@@ -1,7 +1,7 @@
 {
-  "APPLY": "failure",
-  "BUILD": "skipped",
-  "UNIT": "skipped",
-  "BROWSER": "skipped",
-  "EXISTING": "skipped"
+  "APPLY": "success",
+  "BUILD": "success",
+  "UNIT": "failure",
+  "BROWSER": "success",
+  "EXISTING": "success"
 }
