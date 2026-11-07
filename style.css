@@ -43,7 +43,7 @@
 /* Progress uses compositing so the note loop does not trigger layout. */
 #progressFill{width:100%;transform:scaleX(0);transform-origin:left;will-change:transform}
 
-#difficulties{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}#difficulties button{min-width:0}
+#difficulties{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}#difficulties button{min-width:0}
 
 /* Gameplay fills the viewport; stats float over the uninterrupted scene. */
 .running .stage-top,.running .stage-bottom{display:none}

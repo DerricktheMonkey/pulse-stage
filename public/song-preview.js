@@ -10,7 +10,7 @@ function createController(deps={}){
   try{
    const payload=await load(owner.abort.signal);if(active!==owner)return;if(!payload.audio?.size)throw Error('Audio preview unavailable.');
    const player=doc.createElement('audio');owner.audio=player;player.preload='auto';player.volume=.25;owner.url=urls.createObjectURL(payload.audio);player.src=owner.url;
-   player.onloadedmetadata=()=>{if(active===owner)player.currentTime=Number.isFinite(player.duration)&&player.duration>2?Math.min(30,player.duration*.25):0;};
+   player.onloadedmetadata=()=>{if(active!==owner)return;const trim=payload.audioTrim,start=Number.isFinite(trim?.start)?Math.max(0,trim.start):0,end=Number.isFinite(trim?.end)?Math.min(player.duration,trim.end):player.duration;owner.end=end;player.currentTime=start+(Number.isFinite(end)&&end-start>2?Math.min(30,(end-start)*.25):0);};player.ontimeupdate=()=>{if(active===owner&&Number.isFinite(owner.end)&&player.currentTime>=owner.end)stop();};
    player.onended=()=>{if(active===owner)stop();};player.onerror=()=>{if(active===owner){view.status.textContent='This audio format cannot be previewed in this browser.';view.button.textContent='▶ Retry preview';}};
    play(owner);
   }catch(error){if(active===owner){view.status.textContent=error.name==='AbortError'?'Preview cancelled.':error.message||'Preview unavailable.';view.button.textContent='▶ Retry preview';}}

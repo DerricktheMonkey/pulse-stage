@@ -155,7 +155,7 @@ const BeatmapStudio = (()=>{
   };
   // Persist exact manual timing; do not silently regenerate or quantize custom maps.
   const originalSaveChart=saveChart;
-  saveChart=()=>{if(state.editor)storeTiming();originalSaveChart();save('chart',{name:state.name,difficulty:state.difficulty,rating:state.rating,chordGlow:state.chordGlow!==false,customChart:state.customChart,notes:chartNotes(),bpm:state.analysis?.bpm,creatorTiming:state.creatorTiming});};
+  saveChart=()=>{if(state.editor)storeTiming();originalSaveChart();save('chart',{name:state.name,difficulty:state.difficulty,rating:state.rating,chordGlow:state.chordGlow!==false,customChart:state.customChart,notes:chartNotes(),bpm:state.analysis?.bpm,creatorTiming:state.creatorTiming,audioTrim:state.audioTrim});};
   const originalLevel=currentLevel;
   currentLevel=()=>{const level=originalLevel();level.chart.creatorTiming=state.creatorTiming||settings();return level;};
   const originalCapture=captureSongMode;
@@ -163,19 +163,19 @@ const BeatmapStudio = (()=>{
   const originalSwitch=switchSongMode;
   switchSongMode=async create=>{await originalSwitch(create);selection.clear();recorder.undo=[];recorder.redo=[];recorder.selected=-1;state.creatorTiming=songModeDrafts[create?'create':'play']?.creatorTiming||null;if(create){restoreTiming(state.creatorTiming||{bpm:state.analysis?.bpm||120});render();}};
   const originalApply=applyLevel;
-  applyLevel=async level=>{const editAfter=openingLibrary||state.editor;openingLibrary=false;await originalApply(level);state.creatorTiming=level.chart.creatorTiming||null;if(editAfter){state.customChart=true;setTab(true);restoreTiming(state.creatorTiming||{bpm:level.chart.bpm||120});saveChart();say('Saved map opened for editing.');}render();};
+  applyLevel=async level=>{const editAfter=openingLibrary||state.editor;openingLibrary=false;await originalApply(level);state.creatorTiming=state.creatorTiming||level.chart.creatorTiming||null;if(editAfter){state.customChart=true;setTab(true);restoreTiming(state.creatorTiming||{bpm:level.chart.bpm||120});saveChart();say('Saved map opened for editing.');}render();};
   $('studioLibrary').onclick=()=>{openingLibrary=true;showLocalSongs();};
   $('localSongsDialog').addEventListener('close',()=>{openingLibrary=false;});
   $('studioCurrent').onclick=async()=>{
     const draft=songModeDrafts.play;
     if(!draft?.buffer){say('Choose a song in Play Songs first, or use Choose song on the left.');return;}
     if(state.notes.length&&!confirm('Replace this editor draft with the selected song? Saved maps will not be deleted.'))return;
-    stopEditorTransport();for(const k of ['buffer','name','audioBytes','audioType','analysis','difficulty','rating'])state[k]=draft[k];state.notes=[];state.customChart=true;state.creatorTiming=null;$('offset').value=0;resetBackground(false);if(draft.background)await setBackground(draft.background,false);await save('song',{bytes:state.audioBytes||wavBytes(state.buffer),name:state.name,type:state.audioType});restoreTiming({bpm:state.analysis?.bpm||120});saveChart();say('Blank custom chart created for the selected song. Its automatic chart is unchanged.');
+    stopEditorTransport();for(const k of ['buffer','name','audioBytes','audioType','audioTrim','analysis','difficulty','rating'])state[k]=draft[k];state.notes=[];state.customChart=true;state.creatorTiming=null;$('offset').value=0;resetBackground(false);if(draft.background)await setBackground(draft.background,false);await save('song',{bytes:state.audioBytes||wavBytes(state.buffer),name:state.name,type:state.audioType,audioTrim:state.audioTrim});restoreTiming({bpm:state.analysis?.bpm||120});saveChart();say('Blank custom chart created for the selected song. Its automatic chart is unchanged.');
   };
   $('exportChart').onclick=()=>{
-    if(!state.buffer)return;say('Chart exported.');const blob=new Blob([JSON.stringify({version:2,title:state.name,difficulty:state.difficulty,offsetMs:Number($('offset').value),rating:state.rating,chordGlow:state.chordGlow!==false,customChart:state.customChart,bpm:state.analysis?.bpm,creatorTiming:state.creatorTiming||settings(),notes:chartNotes()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pulse-stage-chart.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    if(!state.buffer)return;say('Chart exported.');const blob=new Blob([JSON.stringify({version:2,title:state.name,difficulty:state.difficulty,offsetMs:Number($('offset').value),rating:state.rating,chordGlow:state.chordGlow!==false,customChart:state.customChart,bpm:state.analysis?.bpm,creatorTiming:state.creatorTiming||settings(),audioTrim:state.audioTrim,notes:chartNotes()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='pulse-stage-chart.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
-  $('chartFile').onchange=async event=>{try{if(!state.buffer)throw Error('Import the matching audio first.');const file=event.target.files[0];if(!file)return;if(file.size>5e6)throw Error('Chart file is too large.');const chart=JSON.parse(await file.text()),notes=M.validate(chart.notes,state.buffer.duration);stopEditorTransport();history();state.customChart=true;state.notes=E.markChords(notes);state.rating=chart.rating||1;state.chordGlow=chart.chordGlow!==false;if(Number.isFinite(chart.offsetMs))$('offset').value=M.clamp(chart.offsetMs,-1000,1000);restoreTiming(chart.creatorTiming||{bpm:chart.bpm||120});selection.clear();recorder.selected=-1;saveChart();preferences();say('Chart imported with its exact note timing.');}catch(error){say(error.message);}event.target.value='';};
+  $('chartFile').onchange=async event=>{try{if(!state.buffer)throw Error('Import the matching audio first.');const file=event.target.files[0];if(!file)return;if(file.size>5e6)throw Error('Chart file is too large.');let chart=JSON.parse(await file.text());const decoded=state.audioBytes?await audio().decodeAudioData(state.audioBytes.slice(0)):state.buffer,prepared=typeof prepareSongAudio==='function'?prepareSongAudio(decoded,chart):{buffer:decoded,chart,audioTrim:state.audioTrim};chart=prepared.chart;const notes=M.validate(chart.notes,prepared.buffer.duration);stopEditorTransport();if(JSON.stringify(state.audioTrim)!==JSON.stringify(prepared.audioTrim)){recorder.undo=[];recorder.redo=[];}else history();state.buffer=prepared.buffer;state.audioTrim=prepared.audioTrim;state.difficulty=E.normalizeDifficulty(chart.difficulty||state.difficulty);state.customChart=true;state.notes=E.markChords(notes);state.rating=chart.rating||1;state.chordGlow=chart.chordGlow!==false;if(Number.isFinite(chart.offsetMs))$('offset').value=M.clamp(chart.offsetMs,-1000,1000);restoreTiming(chart.creatorTiming||{bpm:chart.bpm||120});selection.clear();recorder.selected=-1;saveChart();preferences();say('Chart imported with its exact note timing.');}catch(error){say(error.message);}event.target.value='';};
 
   const back=document.createElement('button');back.id='studioReturn';back.className='primary';back.textContent='Return to editor';back.hidden=true;document.body.append(back);
   async function testChart(){
@@ -199,6 +199,6 @@ const BeatmapStudio = (()=>{
   },true);
   window.addEventListener('resize',()=>render());
   new ResizeObserver(()=>render()).observe(canvas);
-  studioReady.then(async()=>{const chart=await read('chart');if(chart?.name===state.name&&chart.customChart){state.creatorTiming=chart.creatorTiming||null;if(chart.bpm)state.analysis={...state.analysis,bpm:chart.bpm};}restoreTiming(state.creatorTiming||{bpm:state.analysis?.bpm||120});render();});
+  studioReady.then(async()=>{const chart=await read('chart');if(chart?.name===state.name&&chart.customChart){state.creatorTiming=state.creatorTiming||chart.creatorTiming||null;if(chart.bpm)state.analysis={...state.analysis,bpm:chart.bpm};}restoreTiming(state.creatorTiming||{bpm:state.analysis?.bpm||120});render();});
   return {version:2,render,settings,seek,get selection(){return [...selection];},get clipboard(){return M.copy(clipboard);},returnFromTest};
 })();

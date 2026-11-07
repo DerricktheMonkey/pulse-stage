@@ -8,8 +8,7 @@ on:
       - '*.css'
       - 'index.html'
       - 'tests/**'
-      - 'scripts/studio-browser.mjs'
-      - 'scripts/grades-browser.mjs'
+      - 'scripts/*browser.mjs'
       - '.github/workflows/studio-checks.yml'
   pull_request:
     paths:
@@ -18,8 +17,7 @@ on:
       - '*.css'
       - 'index.html'
       - 'tests/**'
-      - 'scripts/studio-browser.mjs'
-      - 'scripts/grades-browser.mjs'
+      - 'scripts/*browser.mjs'
       - '.github/workflows/studio-checks.yml'
   workflow_dispatch:
 permissions:
@@ -53,10 +51,16 @@ jobs:
           cp .repair-results/browser.json .repair-results/browser-public.json
           STUDIO_ROOT=. node scripts/studio-browser.mjs
           cp .repair-results/browser.json .repair-results/browser-root.json
-      - name: Result grades and neutral UI on both served builds
+      - name: Grade dialogs and neutral UI
         run: |
           node scripts/grades-browser.mjs
           STUDIO_ROOT=. node scripts/grades-browser.mjs
+      - name: Musical generation, silence trimming and save compatibility
+        run: |
+          node scripts/music-browser.mjs
+          cp .music-results/browser.json .music-results/browser-public.json
+          STUDIO_ROOT=. node scripts/music-browser.mjs
+          cp .music-results/browser.json .music-results/browser-root.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -64,3 +68,4 @@ jobs:
           path: |
             .repair-results
             .grade-results
+            .music-results

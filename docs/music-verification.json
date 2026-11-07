@@ -1,0 +1,13 @@
+{
+  "assetVersion":112,
+  "analyzerVersion":26,
+  "verifiedSource":"19e79b450e0024033ce6b0d40f7db408777539c2",
+  "verificationRun":"https://github.com/DerricktheMonkey/pulse-stage/actions/runs/42346962395",
+  "build":"passed",
+  "unitTests":{"passed":74,"failed":0,"skipped":0},
+  "browser":{"rootAssets":"passed","publicAssets":"passed","uncaughtErrors":[],"checks":["five selectable difficulties, no Beginner in play/editor/battle","real stereo audio decode and conservative edge trimming","original media bytes and internal pauses preserved","all five difficulties generate in the real analysis worker","legacy Beginner imports as Easy without deleting authored notes","save/reload never double-shifts chart timing","saved-source trim metadata round trip","legacy chart rebasing preserves hold lengths and source alignment"],"existingEditorAndGrades":"passed"},
+  "audioFixture":{"originalSeconds":16,"playableSeconds":12.147165532879818,"channels":2,"originalByteLength":705644,"internalSilentSample":0},
+  "generation":{"policy":"audio-supported","attackTiming":"preserved","laneVoicing":"more weight on detected pitch contour; no timestamp changes","restGuard":"subdivision requires a continuously audible interval between nearby attacks","holds":"sustained voice may coexist with an onset tap","difficultyBudgets":"unchanged upper targets; never force unsupported filler","continuousMusicBudgetRegressions":"passed","unfilledBudget":"explicitly reported when a quota would require unsupported filler"},
+  "unchanged":["scroll speed","judgement windows","SS grading","ten lives","life recovery","full opening note travel"],
+  "limitations":["Audio analysis is heuristic, not perfect instrument or vocal transcription","Synthetic-audio and automated-browser checks are not subjective listening tests on every song","Trimming affects playback and chart time; original compressed files are retained non-destructively","Long near-silent edges are trimmed conservatively; quiet material, detected fades and internal pauses are retained"]
+}
