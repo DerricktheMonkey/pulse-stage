@@ -16,18 +16,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Apply scoped layout correction
+      - name: Allow room for wider system fallback fonts
         run: |
           node --input-type=module <<'NODE'
-          import {readFile,writeFile,mkdir} from 'node:fs/promises';
+          import {readFile,writeFile} from 'node:fs/promises';
           import assert from 'node:assert/strict';
-          await mkdir('.repair-results',{recursive:true});
-          const old='#difficulties{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}#difficulties button{min-width:0}';
-          const next='/* Size difficulty columns to their full labels, including Impossible. */\n#difficulties{display:grid;grid-template-columns:repeat(5,minmax(max-content,1fr));gap:2px;padding:3px}\n#difficulties button{min-width:0;padding:8px 1px;white-space:nowrap;line-height:1.3}\n#difficulties button:focus-visible{outline-offset:-2px}';
-          for(const prefix of ['', 'public/']){
-           const css=await readFile(prefix+'style.css','utf8');assert.equal(css.split(old).length,2,'CSS anchor changed');await writeFile(prefix+'style.css',css.replace(old,next));
-           const html=await readFile(prefix+'index.html','utf8');assert.equal(html.split('href="style.css?v=112"').length,2,'stylesheet cache key changed');await writeFile(prefix+'index.html',html.replace('href="style.css?v=112"','href="style.css?v=113"'));
-          }
+          const old='#difficulties{display:grid;grid-template-columns:repeat(5,minmax(max-content,1fr));gap:2px;padding:3px}\n#difficulties button{min-width:0;padding:8px 1px;white-space:nowrap;line-height:1.3}';
+          const next='#difficulties{display:grid;grid-template-columns:repeat(5,minmax(max-content,1fr));gap:1px;padding:2px}\n#difficulties button{min-width:0;padding:8px 0;white-space:nowrap;line-height:1.3}';
+          for(const prefix of ['', 'public/']){const css=await readFile(prefix+'style.css','utf8');assert.equal(css.split(old).length,2,'CSS anchor changed');await writeFile(prefix+'style.css',css.replace(old,next));}
           NODE
       - name: Build and regression tests
         id: unit
@@ -59,7 +55,7 @@ jobs:
           git add style.css public/style.css index.html public/index.html worker/index.js dist/server/index.js
           find .repair-results -name 'difficulty-*.json' -exec git add -f {} +
           if test -f .repair-results/difficulty-unit.txt; then git add -f .repair-results/difficulty-unit.txt; fi
-          git diff --cached --quiet || git commit -m 'Apply content-sized difficulty bar and record browser verification'
+          git diff --cached --quiet || git commit -m 'Keep full difficulty labels inside the bar with fallback fonts'
           git push origin HEAD:fix/difficulty-bar-fit
       - uses: actions/upload-artifact@v4
         if: always()
