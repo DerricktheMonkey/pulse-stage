@@ -1,7 +1,7 @@
 {
   "APPLY": "success",
   "BUILD": "success",
-  "UNIT": "failure",
-  "BROWSER": "success",
-  "EXISTING": "success"
+  "UNIT": "success",
+  "BROWSER": "failure",
+  "EXISTING": "failure"
 }

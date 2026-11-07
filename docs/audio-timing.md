@@ -34,3 +34,14 @@ Countdown, full opening note travel, scroll speed, scoring, SS grading, ten live
 recovery, and in-song timing remain unchanged. Automated fixtures check silence,
 stereo, first attacks, rests, metadata round trips, and chart density. These are
 not a claim of perfect transcription or a listening review of every song.
+
+## Musicality takes precedence over quota
+
+The existing difficulty budgets are unchanged upper targets, not a requirement
+to manufacture taps. `generation.actualNotes` reports the chart count and
+`generation.unfilledBudget` reports any unsupported remainder. Continuous,
+attack-rich fixtures retain their prior totals. Isolated held passages may
+have fewer filler taps than the old implementation, because a midpoint on
+loud audio is no longer sufficient to subdivide a gap crossing a musical rest.
+Regression coverage checks each sustained phrase attack, actual holds, and
+no notes in its silent gaps, rather than insisting on an artificial quota.

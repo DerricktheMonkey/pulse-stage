@@ -612,7 +612,7 @@ function analyze(samples,rate,difficulty='normal',options={}){
  let base=musicChart(analysis,target);
  if(easy){const spaced=[];for(const n of base)if(!spaced.length||n.time-spaced.at(-1).time>=.24)spaced.push(n);base=spaced;}
  const notes=musicAccents(phraseVoice(base,analysis,difficulty),analysis,difficulty);
- return {...analysis,notes,scanVersion:26,patternStyle:'phrase-aware',generation:{targetNotes:easy?notes.length:target,actualNotes:notes.length},rhythmSubdivisions:[],density:{...analysis.density,targetPerSecond:analysis.density.targetPerSecond*(easy?.78:1),actualPerSecond:notes.length/(samples.length/rate||1)}};
+ return {...analysis,notes,scanVersion:26,patternStyle:'phrase-aware',generation:{targetNotes:easy?notes.length:target,actualNotes:notes.length,unfilledBudget:easy?0:Math.max(0,target-notes.length),policy:'audio-supported'},rhythmSubdivisions:[],density:{...analysis.density,targetPerSecond:analysis.density.targetPerSecond*(easy?.78:1),actualPerSecond:notes.length/(samples.length/rate||1)}};
 }
 // Give early notes their complete travel path after the initial countdown.
 function openingLead(notes,travel=.65,chartOffset=0){return Math.max(.05,Number(travel)||.65)+Math.max(0,-((notes[0]?.time||0)+(Number(chartOffset)||0)));}

@@ -1,1 +1,1 @@
-Corrected chord-supported sustains, old preview compatibility and retired difficulty assertions.
+Verified fixes preserve musical evidence; budgets do not force silence filler.

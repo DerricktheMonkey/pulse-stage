@@ -25,8 +25,11 @@ library and requires its normal authentication/storage configuration.
 
 ## Generation
 
-Generation keeps the existing per-song density budget, including the doubled
-Normal/Hard/Insane/Impossible budget. Beginner retains melody-led solo holds.
+Generation retains the existing difficulty budgets as upper targets, including
+the doubled Normal/Hard/Insane/Impossible budgets. Audio-supported busy passages
+retain their density; a quota cannot force filler across a musical rest.
+The playable modes are Easy, Normal, Hard, Insane, and Impossible. Legacy
+Beginner maps load as Easy without deleting their authored notes.
 The automatic chart is a separate draft from the custom editor.
 
 Musically stronger, busier phrases receive more detail without filling silence.
