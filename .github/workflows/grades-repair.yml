@@ -32,7 +32,9 @@ jobs:
           set -o pipefail
           npm test 2>&1 | tee .grade-results/unit.txt
       - name: Browser dependencies
-        run: npm install --no-save --package-lock=false playwright
+        run: |
+          npm install --no-save --package-lock=false playwright
+          if ! command -v google-chrome && ! command -v chromium; then npx playwright install --with-deps chromium; fi
       - name: Test grades and UI on both served builds
         id: browser
         continue-on-error: true
@@ -74,4 +76,5 @@ jobs:
           UNIT: ${{ steps.unit.outcome }}
           BROWSER: ${{ steps.browser.outcome }}
           STUDIO: ${{ steps.studio.outcome }}
-        run: node -e "for(const k of ['APPLY','BUILD','UNIT','BROWSER','STUDIO'])if(process.env[k]!=='success')throw Error(k+' did not pass: '+process.env[k])"
+        run: |
+          node -e "for(const k of ['APPLY','BUILD','UNIT','BROWSER','STUDIO'])if(process.env[k]!=='success')throw Error(k+' did not pass: '+process.env[k])"
