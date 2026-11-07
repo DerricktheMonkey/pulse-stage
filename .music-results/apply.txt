@@ -1,1 +1,1 @@
-Verified fixes preserve musical evidence; budgets do not force silence filler.
+Browser checks now wait for confirmed completion of the Save action.

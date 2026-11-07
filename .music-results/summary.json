@@ -2,6 +2,6 @@
   "APPLY": "success",
   "BUILD": "success",
   "UNIT": "success",
-  "BROWSER": "failure",
-  "EXISTING": "failure"
+  "BROWSER": "success",
+  "EXISTING": "success"
 }
