@@ -18,3 +18,26 @@ for(let frame=1;frame<=2500;frame++)late.sample(clock+frame*1000/120,10.1+frame/
 snap=late.snapshots()[0];assert(snap.recent.worstMs<9,'Recent window drops an old hitch after five seconds');assert.equal(snap.whole.worstMs,100,'Full-run summary retains the hitch');assert(snap.recent.frames<=602,'Recent reporting stays bounded on long songs');
 const tempo=P.createMonitor();tempo.begin({rate:2});tempo.sample(0,0,1);tempo.sample(10,.02,1);assert.equal(tempo.snapshots()[0].recent.maxClockErrorMs,0,'Training speed is not reported as clock jitter');
 console.log('PASS: late-song stalls, full-run and rolling five-second reports, high-refresh skipped callbacks, draw cost, pause exclusion, bounded history and training-rate clocks.');
+
+const budget=P.createPlayfieldBudget();
+const ratio=()=>budget.pixelRatio(1280,720,2);
+let frameTime=0,changes=0;
+function step(ms,playing=true,paused=false){
+ frameTime+=ms;
+ if(budget.update(frameTime,playing,paused))changes++;
+}
+for(let i=0;i<160;i++)step(1000/60);
+step(600);
+for(let i=0;i<20;i++)step(1000/30);
+for(let i=0;i<100;i++)step(1000/60);
+assert.equal(ratio(),2,'Fast frames, one stall and a short slow patch keep full density');
+for(let i=0;i<48;i++)step(1000/30);
+assert.equal(ratio(),1,'Sustained 30 FPS uses a smaller backing canvas');
+assert.equal(budget.pixelRatio(640,360,1),1,'A small canvas needs no downscaling');
+assert.equal(changes,1,'Only one downshift per run');
+step(2000,false,true);
+for(let i=0;i<120;i++)step(1000/120);
+assert.equal(ratio(),1,'Pause and recovery do not repeatedly reallocate during play');
+step(25,false,false);
+assert.equal(ratio(),2,'The next run can start at full density');
+assert.equal(changes,2);

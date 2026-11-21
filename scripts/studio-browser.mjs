@@ -41,7 +41,22 @@ try{
  await page.evaluate(()=>{document.getElementById('editorSaveStatus').textContent='';});await page.click('#editorSave');await page.waitForFunction(()=>document.getElementById('editorSaveStatus').textContent.startsWith('Saved'),{}, {timeout:15000});const saved=await page.evaluate(async()=>read('localLevel:'+(await read('localLevels'))[0].id));assert.equal(saved.chart.creatorTiming.bpm,135);assert.deepEqual(saved.chart.notes,expected);
  await page.reload();await page.waitForFunction(()=>typeof BeatmapStudio!=='undefined'&&state.buffer&&!state.loading,{},{timeout:90000});assert.deepEqual(await noteState(),expected);
  await page.click('#createModeBtn');await page.click('#studioLibrary');await page.locator('#localSongCards button').filter({hasText:'Load song'}).first().click();await page.waitForFunction(()=>state.editor&&state.buffer&&state.notes.length===6);assert.equal(await page.inputValue('#alignBpm'),'135');assert.deepEqual(await noteState(),expected);passed.push('local save, reload, and reopen saved map for editing');
- await page.click('#studioPlaytest');await page.waitForFunction(()=>state.playing,{},{timeout:20000});assert.equal(await page.evaluate(()=>state.trainingRun),true);await page.click('#studioReturn');await page.waitForFunction(()=>state.editor&&!state.playing);assert.deepEqual(await noteState(),expected);passed.push('real gameplay playtest returns to exact draft without ranked scoring');
+ await page.click('#studioPlaytest');await page.waitForFunction(()=>state.playing,{},{timeout:20000});assert.equal(await page.evaluate(()=>state.trainingRun),true);
+ const alignments=await page.evaluate(()=>{
+  function alignment(canvasId,bedClass){
+   const field=document.getElementById(canvasId).getBoundingClientRect();
+   const bed=document.querySelector(bedClass+' .lane-surfaces').getBoundingClientRect();
+   return [bed.left-field.left-field.width*.045,bed.width-field.width*.91,
+    bed.top-field.top-28,field.bottom-bed.bottom-42];
+  }
+  const solo=alignment('game','.player-bed');
+  BattleView.begin({notes:state.notes,colors:state.palette});
+  try{return [solo,alignment('game','.player-bed'),alignment('opponentGame','.opponent-bed')];}
+  finally{BattleView.end();}
+ });
+ for(const delta of alignments.flat())assert(Math.abs(delta)<1,'Lane artwork aligns with canvas note coordinates');
+ passed.push('solo and split playfield artwork aligns with note positions');
+ await page.click('#studioReturn');await page.waitForFunction(()=>state.editor&&!state.playing);assert.deepEqual(await noteState(),expected);passed.push('real gameplay playtest returns to exact draft without ranked scoring');
  await page.locator('#editorView').screenshot({path:'.repair-results/studio-desktop.png'});
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);assert((await page.locator('#timeline').boundingBox()).width>200);
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),'mobile layout must not overflow horizontally');

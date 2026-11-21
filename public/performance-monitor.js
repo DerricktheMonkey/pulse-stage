@@ -1,4 +1,29 @@
 (function(root){'use strict';
+// Reduce gameplay raster work after sustained slow frames. One stall cannot
+// trigger a resize, and a recovering frame rate keeps its scale until run end.
+function createPlayfieldBudget(){
+ let previous=null,slowMs=0,limited=false;
+ function update(now,playing,paused){
+  if(!playing||previous===null||now<=previous){
+   const restore=limited&&!playing&&!paused;
+   if(restore)limited=false;
+   previous=playing?now:null;slowMs=0;
+   return restore;
+  }
+  const interval=now-previous;
+  previous=now;
+  if(limited)return false;
+  slowMs=interval>=25?slowMs+Math.min(100,interval):Math.max(0,slowMs-interval);
+  if(slowMs<1000)return false;
+  limited=true;
+  return true;
+ }
+ function pixelRatio(width,height,nativeRatio){
+  if(!limited||width<=0||height<=0)return nativeRatio;
+  return Math.min(nativeRatio,Math.max(.75,Math.sqrt(1280*720/(width*height))));
+ }
+ return {update,pixelRatio};
+}
 function createMonitor(){
  let current=null,history=[];
  const bucket=()=>({frames:0,totalMs:0,worstMs:0,slowFrames:0,maxClockErrorMs:0,maxDrawMs:0});
@@ -29,5 +54,5 @@ function createMonitor(){
   if(m.motionChanges)lines.push('Background motion changed during this run — restart for a clean comparison.');if(!run.complete)lines.push('Partial sample — play through the first three seconds for a full comparison.');return lines.join('\n');}).join('\n\n');}
  return {begin,sample,pause,motionChanged,snapshots,report};
 }
-const api={createMonitor,...createMonitor()};if(typeof module!=='undefined')module.exports=api;root.PulsePerformance=api;
+const api={createMonitor,...createMonitor(),createPlayfieldBudget,playfield:createPlayfieldBudget()};if(typeof module!=='undefined')module.exports=api;root.PulsePerformance=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

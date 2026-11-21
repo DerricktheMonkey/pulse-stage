@@ -10,7 +10,7 @@ function harness(rate=1){
  return {state,heads,caps,misses,context:c,elements,draw(frame,delay,time){wall=frame+delay;seconds=time;c.render(frame);}};
 }
 let worstError=0;
-for(const hz of [60,120,144,240])for(const rate of [.5,1,2]){
+for(const hz of [20,24,30,45,60,120,144,240])for(const rate of [.5,1,2]){
  const h=harness(rate),delays=[0,3,1,4,0,2];let previous;
  for(let i=0;i<Math.min(40,Math.floor(.9*hz/rate));i++){
   const frame=i*1000/hz,delay=delays[i%delays.length],frameTime=9+frame/1000*rate;
@@ -21,10 +21,16 @@ for(const hz of [60,120,144,240])for(const rate of [.5,1,2]){
   previous=h.heads.at(-1);
  }
 }
+const dropped=harness();
+for(const [frame,delay] of [[0,0],[33,7],[67,2],[175,9],[201,1],[250,0],[375,11],[443,2]]){
+ dropped.draw(frame,delay,9+(frame+delay)/1000);
+ assert(Math.abs(dropped.heads.at(-1)-(28+frame*.53))<1e-8,'Head catches up on the first frame after a gap');
+ assert(Math.abs(dropped.caps.at(-1)-(28+Math.max(0,frame-250)*.53))<1e-8,'Hold cap stays on the same clock after a gap');
+}
 const paused=harness();paused.state.playing=false;paused.state.paused=true;paused.draw(100,4,9.5);const frozen=paused.heads.at(-1);paused.draw(200,1,9.5);assert.equal(paused.heads.at(-1),frozen,'Practice freeze stays still');
 const rewind=harness();rewind.state.origin=0;rewind.state.rewindTarget=9.5;rewind.draw(100,4,9.5);assert.equal(rewind.heads.at(-1),frozen,'Rewind countdown never draws before its saved position');
 const judged=harness();judged.state.notes=[{time:9,lane:0,duration:0}];judged.draw(100,4,9+E.HIT_WINDOW+.001);assert.deepEqual(judged.misses,['MISS'],'Miss window uses audio time even when visual frame time is earlier');
-console.log('PASS: uniform note/hold movement at 60/120/144/240Hz and 0.5/1/2x with 0–4ms dispatch jitter, pause, rewind clamp, and unchanged audio-clock judgments; worst step error '+worstError.toExponential(2)+'px.');
+console.log('PASS: uniform note/hold movement at 20–240Hz and 0.5/1/2x with 0–4ms dispatch jitter, pause, rewind clamp, and unchanged audio-clock judgments; worst step error '+worstError.toExponential(2)+'px.');
 
 const ui=harness();ui.context.fmt=t=>String(Math.floor(t));let writes=0,transforms=0;
 for(const id of ['elapsed','feedback','countdown']){let text='';Object.defineProperty(ui.context.$(id),'textContent',{get:()=>text,set:v=>{writes++;text=v;}});}
@@ -34,7 +40,7 @@ ui.state.feedbackUntil=0;for(let i=0;i<180;i++)ui.draw(i*1000/180,0,9+i/180);
 assert(writes<=2,'Unchanged clock/countdown/feedback text is not recreated at display refresh rate');assert.equal(transforms,180,'Progress remains smooth through compositor transforms');
 // Fresh runs keep notes hidden through 3-2-1, then let every early head enter
 // at the top before the music reaches its judgement time, including offsets.
-for(const hz of [60,120,144,240])for(const rate of [.5,1,2])for(const chartOffset of [0,-.6,.2]){
+for(const hz of [20,24,30,45,60,120,144,240])for(const rate of [.5,1,2])for(const chartOffset of [0,-.6,.2]){
  const intro=harness(rate),travel=.65;intro.state.notes=[{time:.05,lane:0,duration:0}];intro.state.noteTravel=travel;intro.context.offset=()=>chartOffset;intro.state.openingLead=E.openingLead(intro.state.notes,travel,chartOffset);intro.state.openingCount=3;
  const initial=-3*rate-intro.state.openingLead;let first;
  for(let i=0;i<Math.ceil((3+intro.state.openingLead/rate)*hz);i++){

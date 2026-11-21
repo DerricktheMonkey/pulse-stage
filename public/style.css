@@ -63,3 +63,54 @@
 .running #lifeBar{box-shadow:0 1px 5px #0009}
 .running .life-rule{position:absolute;top:calc(80px + env(safe-area-inset-top,0px));left:0;right:0;z-index:4;padding:0 24px;color:#eef1ff;text-shadow:0 2px 5px #000,0 0 12px #000}
 .running #battleHud{position:absolute;top:env(safe-area-inset-top,0px);left:50%;transform:translateX(-50%);z-index:4;width:max-content;max-width:100%;background:transparent;border:0;pointer-events:none;text-shadow:0 2px 5px #000,0 0 12px #000}
+
+/* The stage stays behind the transparent input and note canvases. */
+.lane-bed {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  --lane-top: #1a243121;
+  --lane-bottom: #172a35bb;
+}
+.has-background .player-bed { --lane-top: #080e1808; --lane-bottom: #080e184d; }
+.opponent-bed { display: none; left: auto; right: 0; --lane-top: #080e1808; }
+.battle-split .lane-bed { width: calc((100% - var(--battle-gap)) / 2); }
+.battle-split .opponent-bed { display: block; }
+.running .lane-bed { height: calc(100% - 64px - env(safe-area-inset-bottom, 0px)); }
+.lane-surfaces, .lane-grid { position: absolute; inset: 28px 4.5% 42px; }
+.lane-surfaces { display: flex; }
+.lane-surfaces > i {
+  flex: 1;
+  position: relative;
+  padding-inline: 1px;
+  background: linear-gradient(var(--lane-top), var(--lane-bottom)) content-box;
+}
+.lane-surfaces > i::before, .lane-surfaces > i:last-child::after {
+  content: "";
+  position: absolute;
+  left: -0.5px;
+  top: 0;
+  width: 1px;
+  height: 108%;
+  background: #ffffff30;
+}
+.lane-surfaces > i:first-child::before, .lane-surfaces > i:last-child::after {
+  width: 1.5px;
+  background: var(--mint);
+  opacity: 0.47;
+}
+.lane-surfaces > i:last-child::after { left: auto; right: -0.75px; }
+.lane-grid { overflow: hidden; }
+.lane-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -20%;
+  background: linear-gradient(#819ab010 1.5px, transparent 1.5px) 0 0 / 100% calc(100% / 6);
+  animation: stage-grid-scroll 1.8s linear infinite;
+}
+@keyframes stage-grid-scroll {
+  from { transform: translateY(calc(-100% / 6)); }
+  to { transform: translateY(0); }
+}
