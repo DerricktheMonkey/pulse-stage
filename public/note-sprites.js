@@ -51,11 +51,7 @@ function createEffectCache(doc,bitmapFactory=typeof root.createImageBitmap==='fu
  function draw(g,e,p,x,y){
   const atlas=atlases.get(e.color+'|'+e.particles);if(!atlas)return false;
   const position=Math.max(0,Math.min(1,p))*(frames-1),lo=Math.floor(position),hi=Math.min(frames-1,lo+1),mix=position-lo;
-  // Avoid allocating frame/weight arrays for every active hit each frame.
-  g.save();const alpha=g.globalAlpha*(1-p);
-  if(mix<1){g.globalAlpha=alpha*(1-mix);g.drawImage(atlas,lo%columns*tile,Math.floor(lo/columns)*tile,tile,tile,x-center,y-center,tile,tile);}
-  if(mix>0&&hi!==lo){g.globalAlpha=alpha*mix;g.drawImage(atlas,hi%columns*tile,Math.floor(hi/columns)*tile,tile,tile,x-center,y-center,tile,tile);}
-  g.restore();return true;
+  g.save();const alpha=g.globalAlpha;for(const [frame,weight] of [[lo,1-mix],[hi,mix]])if(weight>0){g.globalAlpha=alpha*(1-p)*weight;g.drawImage(atlas,frame%columns*tile,Math.floor(frame/columns)*tile,tile,tile,x-center,y-center,tile,tile);}g.restore();return true;
  }
  function warm(palette){
   if(!prepare(palette)||!bitmapFactory)return Promise.resolve();const ticket=signature;if(warmKey===ticket)return warming;warmKey=ticket;

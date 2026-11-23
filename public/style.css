@@ -114,3 +114,7 @@
   from { transform: translateY(calc(-100% / 6)); }
   to { transform: translateY(0); }
 }
+
+/* Reduce full-screen compositor work while keeping original video resolution. */
+.running .stage-panel{backdrop-filter:none;box-shadow:none}
+.running .lane-grid::before{animation:none;transform:none}

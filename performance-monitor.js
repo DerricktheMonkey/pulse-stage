@@ -2,25 +2,24 @@
 // Reduce gameplay raster work after sustained slow frames. One stall cannot
 // trigger a resize, and a recovering frame rate keeps its scale until run end.
 function createPlayfieldBudget(){
- let previous=null,slowMs=0,limited=false;
+ // Limit high-DPI canvas pixels before the first note, preventing the 2D
+ // playfield from competing excessively with full-resolution video decode.
+ // Never resize the backing canvas mid-song; it causes a display-frame hitch.
+ let previous=null,slowMs=0,healthyMs=0,active=false,activeLimited=false,nextLimited=false;
  function update(now,playing,paused){
-  if(!playing||previous===null||now<=previous){
-   const restore=limited&&!playing&&!paused;
-   if(restore)limited=false;
-   previous=playing?now:null;slowMs=0;
-   return restore;
-  }
-  const interval=now-previous;
-  previous=now;
-  if(limited)return false;
-  slowMs=interval>=25?slowMs+Math.min(100,interval):Math.max(0,slowMs-interval);
-  if(slowMs<1000)return false;
-  limited=true;
-  return true;
+  if(!playing){previous=null;if(!paused)active=false;return false;}
+  if(previous===null||now<=previous){if(!active){active=true;activeLimited=nextLimited;}previous=now;slowMs=0;healthyMs=0;return false;}
+  const interval=now-previous;previous=now;
+  if(interval>=25){slowMs+=Math.min(100,interval);healthyMs=0;}
+  else{slowMs=Math.max(0,slowMs-interval);healthyMs+=interval;}
+  if(slowMs>=1000)nextLimited=true;
+  if(healthyMs>=3000)nextLimited=false;
+  return false;
  }
  function pixelRatio(width,height,nativeRatio){
-  if(!limited||width<=0||height<=0)return nativeRatio;
-  return Math.min(nativeRatio,Math.max(.75,Math.sqrt(1280*720/(width*height))));
+  if(!(width>0&&height>0))return nativeRatio;
+  const pixelBudget=(active?activeLimited:nextLimited)?1200000:2400000;
+  return Math.min(nativeRatio,Math.sqrt(pixelBudget/(width*height)));
  }
  return {update,pixelRatio};
 }
@@ -35,15 +34,8 @@ function createMonitor(){
   if(!prior){if(songTime>=3)current.done=true;return;}
   const dt=now-prior.now;if(dt<=0)return;
   const rate=current.metadata.rate||1,error=Math.abs((songTime-prior.songTime)*1000/rate-dt);
-  if(!current.done){add(current[prior.phase],dt,error,drawMs);if(phase!==prior.phase)add(current[phase],dt,error,drawMs);}
-  if(songTime>=0){
-   add(current.whole,dt,error,drawMs);
-   // Reuse rolling samples rather than allocating objects on every display frame.
-   let sample=current.recent[current.cursor];
-   if(!sample)current.recent[current.cursor]=sample={};
-   sample.at=now;sample.dt=dt;sample.error=error;sample.drawMs=drawMs;sample.songTime=songTime;
-   current.cursor=(current.cursor+1)%2400;
-  }
+  if(!current.done)for(const name of new Set([prior.phase,phase]))add(current[name],dt,error,drawMs);
+  if(songTime>=0){add(current.whole,dt,error,drawMs);current.recent[current.cursor]={at:now,dt,error,drawMs,songTime};current.cursor=(current.cursor+1)%2400;}
   if(songTime>=3)current.done=true;
  }
  function motionChanged(){if(current)current.metadata.motionChanges=(current.metadata.motionChanges||0)+1;}
