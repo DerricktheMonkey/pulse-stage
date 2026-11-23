@@ -23,6 +23,36 @@ function createPlayfieldBudget(){
  }
  return {update,pixelRatio};
 }
+// Animate note positions from display-frame timestamps, not callback dispatch time.
+// The audio presentation clock remains authoritative for hit judgement.  Only
+// bounded, gradual corrections reach the visual clock, so timestamp jitter
+// cannot make notes visually stall and then surge ahead on adjacent frames.
+function createNoteMotionClock(){
+ let lastFrame=null,lastTime=0,lastRate=1;
+ function reset(){lastFrame=null;}
+ function sample(frameMs,audioTime,sampleWallMs,playbackRate=1){
+  if(!Number.isFinite(frameMs)||!Number.isFinite(audioTime))return audioTime;
+  const rate=Number.isFinite(playbackRate)&&playbackRate>0?playbackRate:1;
+  // rAF's timestamp is the start of the display frame; performance.now() is
+  // later if other work delayed this callback. Never animate from that delay.
+  const late=Number.isFinite(sampleWallMs)?Math.max(0,Math.min(250,sampleWallMs-frameMs)):0;
+  const atFrame=audioTime-late*rate/1000;
+  if(lastFrame===null||frameMs<lastFrame||frameMs-lastFrame>2000||rate!==lastRate){
+   lastFrame=frameMs;lastTime=atFrame;lastRate=rate;return lastTime;
+  }
+  const elapsed=(frameMs-lastFrame)/1000*rate;
+  if(elapsed<=0)return lastTime;
+  const predicted=lastTime+elapsed;
+  const error=atFrame-predicted;
+  // Corrections cannot reverse motion or change its speed by more than 4%.
+  // A genuine skipped frame still advances by its full elapsed duration.
+  const limit=elapsed*.04,correction=Math.max(-limit,Math.min(limit,error*.12));
+  lastTime=Math.max(lastTime,predicted+correction);
+  lastFrame=frameMs;
+  return lastTime;
+ }
+ return {sample,reset};
+}
 function createMonitor(){
  let current=null,history=[];
  const bucket=()=>({frames:0,totalMs:0,worstMs:0,slowFrames:0,maxClockErrorMs:0,maxDrawMs:0});
@@ -53,5 +83,5 @@ function createMonitor(){
   if(m.motionChanges)lines.push('Background motion changed during this run — restart for a clean comparison.');if(!run.complete)lines.push('Partial sample — play through the first three seconds for a full comparison.');return lines.join('\n');}).join('\n\n');}
  return {begin,sample,pause,motionChanged,snapshots,report};
 }
-const api={createMonitor,...createMonitor(),createPlayfieldBudget,playfield:createPlayfieldBudget()};if(typeof module!=='undefined')module.exports=api;root.PulsePerformance=api;
+const api={createMonitor,...createMonitor(),createPlayfieldBudget,playfield:createPlayfieldBudget(),createNoteMotionClock,noteMotion:createNoteMotionClock()};if(typeof module!=='undefined')module.exports=api;root.PulsePerformance=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
