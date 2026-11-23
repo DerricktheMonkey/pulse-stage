@@ -165,8 +165,8 @@ function resize(){
  const r=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);
  if(!r.width||!r.height)return;
  w=r.width;h=r.height;
- const movingBackground=$('backgroundMotion')?.checked!==false&&
-  (state.media?.tagName==='VIDEO'||state.backgroundFile?.type==='image/gif');
+ const movingBackground=(state.media?.tagName==='VIDEO'||state.backgroundFile?.type==='image/gif')&&
+  $('backgroundMotion')?.checked!==false;
  const scale=typeof PulsePerformance==='undefined'?dpr:PulsePerformance.playfield.pixelRatio(w,h,dpr,movingBackground);
  const width=Math.round(w*scale),height=Math.round(h*scale);
  if(canvas.width===width&&canvas.height===height&&state.canvasDpr===dpr)return;
