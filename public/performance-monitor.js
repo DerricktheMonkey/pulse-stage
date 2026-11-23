@@ -35,8 +35,15 @@ function createMonitor(){
   if(!prior){if(songTime>=3)current.done=true;return;}
   const dt=now-prior.now;if(dt<=0)return;
   const rate=current.metadata.rate||1,error=Math.abs((songTime-prior.songTime)*1000/rate-dt);
-  if(!current.done)for(const name of new Set([prior.phase,phase]))add(current[name],dt,error,drawMs);
-  if(songTime>=0){add(current.whole,dt,error,drawMs);current.recent[current.cursor]={at:now,dt,error,drawMs,songTime};current.cursor=(current.cursor+1)%2400;}
+  if(!current.done){add(current[prior.phase],dt,error,drawMs);if(phase!==prior.phase)add(current[phase],dt,error,drawMs);}
+  if(songTime>=0){
+   add(current.whole,dt,error,drawMs);
+   // Reuse rolling samples rather than allocating objects on every display frame.
+   let sample=current.recent[current.cursor];
+   if(!sample)current.recent[current.cursor]=sample={};
+   sample.at=now;sample.dt=dt;sample.error=error;sample.drawMs=drawMs;sample.songTime=songTime;
+   current.cursor=(current.cursor+1)%2400;
+  }
   if(songTime>=3)current.done=true;
  }
  function motionChanged(){if(current)current.metadata.motionChanges=(current.metadata.motionChanges||0)+1;}
