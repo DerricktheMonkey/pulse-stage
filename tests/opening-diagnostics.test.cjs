@@ -20,24 +20,24 @@ const tempo=P.createMonitor();tempo.begin({rate:2});tempo.sample(0,0,1);tempo.sa
 console.log('PASS: late-song stalls, full-run and rolling five-second reports, high-refresh skipped callbacks, draw cost, pause exclusion, bounded history and training-rate clocks.');
 
 const budget=P.createPlayfieldBudget();
-const ratio=()=>budget.pixelRatio(1280,720,2);
-let frameTime=0,changes=0;
-function step(ms,playing=true,paused=false){
- frameTime+=ms;
- if(budget.update(frameTime,playing,paused))changes++;
-}
+let clock=0,changed=0;
+const step=(ms,playing=true,paused=false)=>{clock+=ms;if(budget.update(clock,playing,paused))changed++;};
+const normal=budget.pixelRatio(1280,720,2);
+assert(normal<2&&normal>1.5,'Fullscreen raster density starts bounded on a high-DPI screen');
 for(let i=0;i<160;i++)step(1000/60);
 step(600);
 for(let i=0;i<20;i++)step(1000/30);
 for(let i=0;i<100;i++)step(1000/60);
-assert.equal(ratio(),2,'Fast frames, one stall and a short slow patch keep full density');
+assert.equal(budget.pixelRatio(1280,720,2),normal,'A stall and brief slowdown do not change canvas density mid-song');
 for(let i=0;i<48;i++)step(1000/30);
-assert.equal(ratio(),1,'Sustained 30 FPS uses a smaller backing canvas');
-assert.equal(budget.pixelRatio(640,360,1),1,'A small canvas needs no downscaling');
-assert.equal(changes,1,'Only one downshift per run');
-step(2000,false,true);
-for(let i=0;i<120;i++)step(1000/120);
-assert.equal(ratio(),1,'Pause and recovery do not repeatedly reallocate during play');
-step(25,false,false);
-assert.equal(ratio(),2,'The next run can start at full density');
-assert.equal(changes,2);
+assert.equal(budget.pixelRatio(1280,720,2),normal,'Sustained slowdown never reallocates canvas mid-song');
+assert.equal(changed,0,'Quality adjustments happen between songs');
+step(20,false,false);
+const reduced=budget.pixelRatio(1280,720,2);
+assert(reduced<normal,'The next song uses lower canvas density after a slow run');
+assert.equal(budget.pixelRatio(640,360,1),1,'Small canvas remains at native DPR');
+for(let i=0;i<200;i++)step(1000/60);
+assert.equal(budget.pixelRatio(1280,720,2),reduced,'Recovery never resizes a running song');
+step(20,false,false);
+assert.equal(budget.pixelRatio(1280,720,2),normal,'The next run recovers density after smooth frames');
+console.log('PASS: bounded GPU canvas, stable in-run quality, adaptive quality between songs.');
