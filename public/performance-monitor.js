@@ -2,25 +2,24 @@
 // Reduce gameplay raster work after sustained slow frames. One stall cannot
 // trigger a resize, and a recovering frame rate keeps its scale until run end.
 function createPlayfieldBudget(){
- let previous=null,slowMs=0,limited=false;
+ // Limit high-DPI canvas pixels before the first note, preventing the 2D
+ // playfield from competing excessively with full-resolution video decode.
+ // Never resize the backing canvas mid-song; it causes a display-frame hitch.
+ let previous=null,slowMs=0,healthyMs=0,active=false,activeLimited=false,nextLimited=false;
  function update(now,playing,paused){
-  if(!playing||previous===null||now<=previous){
-   const restore=limited&&!playing&&!paused;
-   if(restore)limited=false;
-   previous=playing?now:null;slowMs=0;
-   return restore;
-  }
-  const interval=now-previous;
-  previous=now;
-  if(limited)return false;
-  slowMs=interval>=25?slowMs+Math.min(100,interval):Math.max(0,slowMs-interval);
-  if(slowMs<1000)return false;
-  limited=true;
-  return true;
+  if(!playing){previous=null;if(!paused)active=false;return false;}
+  if(previous===null||now<=previous){if(!active){active=true;activeLimited=nextLimited;}previous=now;slowMs=0;healthyMs=0;return false;}
+  const interval=now-previous;previous=now;
+  if(interval>=25){slowMs+=Math.min(100,interval);healthyMs=0;}
+  else{slowMs=Math.max(0,slowMs-interval);healthyMs+=interval;}
+  if(slowMs>=1000)nextLimited=true;
+  if(healthyMs>=3000)nextLimited=false;
+  return false;
  }
  function pixelRatio(width,height,nativeRatio){
-  if(!limited||width<=0||height<=0)return nativeRatio;
-  return Math.min(nativeRatio,Math.max(.75,Math.sqrt(1280*720/(width*height))));
+  if(!(width>0&&height>0))return nativeRatio;
+  const pixelBudget=(active?activeLimited:nextLimited)?1200000:2400000;
+  return Math.min(nativeRatio,Math.sqrt(pixelBudget/(width*height)));
  }
  return {update,pixelRatio};
 }
