@@ -20,8 +20,8 @@ const tempo=P.createMonitor();tempo.begin({rate:2});tempo.sample(0,0,1);tempo.sa
 console.log('PASS: late-song stalls, full-run and rolling five-second reports, high-refresh skipped callbacks, draw cost, pause exclusion, bounded history and training-rate clocks.');
 
 const budget=P.createPlayfieldBudget();
-let clock=0,changes=0;
-const step=(ms,playing=true,paused=false)=>{clock+=ms;if(budget.update(clock,playing,paused))changes++;};
+let budgetClock=0,changes=0;
+const step=(ms,playing=true,paused=false)=>{budgetClock+=ms;if(budget.update(budgetClock,playing,paused))changes++;};
 const full=budget.pixelRatio(1280,720,2);
 assert(full>1.5&&full<2,'Initial fullscreen raster budget reduces high-DPI GPU load');
 for(let i=0;i<160;i++)step(1000/60);
